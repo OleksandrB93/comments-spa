@@ -54,7 +54,7 @@ Web application for commenting using React, NestJS, GraphQL, MongoDB and other m
 ### Requirements
 
 - Docker and Docker Compose
-- Node.js 18+ (for local development)
+- Node.js 20+ (for local development)
 - Git
 
 ### Quick Start

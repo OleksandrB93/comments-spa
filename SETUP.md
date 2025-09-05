@@ -1,10 +1,10 @@
-# Інструкція по налаштуванню проекту
+# Project Setup Instructions
 
-## Передумови
+## Prerequisites
 
-### Обов'язкові інструменти:
+### Required Tools:
 
-1. **Docker** та **Docker Compose**
+1. **Docker** and **Docker Compose**
 
    - Windows: [Docker Desktop](https://www.docker.com/products/docker-desktop/)
    - Linux: `sudo apt install docker.io docker-compose`
@@ -16,19 +16,19 @@
    - Linux: `sudo apt install git`
    - macOS: `brew install git`
 
-3. **Node.js 18+** (для локальної розробки)
-   - [Офіційний сайт](https://nodejs.org/)
+3. **Node.js 18+** (for local development)
+   - [Official website](https://nodejs.org/)
 
-## Швидкий старт
+## Quick Start
 
-### 1. Клонування репозиторію
+### 1. Clone Repository
 
 ```bash
 git clone <repository-url>
 cd comments-spa
 ```
 
-### 2. Налаштування змінних середовища
+### 2. Environment Variables Setup
 
 ```bash
 # Backend
@@ -38,21 +38,21 @@ cp backend/env.example backend/.env
 cp frontend/env.example frontend/.env
 ```
 
-### 3. Запуск через Docker (рекомендовано)
+### 3. Run with Docker (recommended)
 
 ```bash
-# Запуск всіх сервісів
+# Start all services
 make start
-# або
+# or
 docker-compose up -d
 
-# Перевірка статусу
+# Check status
 make status
-# або
+# or
 docker-compose ps
 ```
 
-### 4. Доступ до додатку
+### 4. Access the Application
 
 - **Frontend**: http://localhost:3000
 - **Backend GraphQL**: http://localhost:3001/graphql
@@ -61,7 +61,7 @@ docker-compose ps
 - **Elasticsearch**: http://localhost:9200
 - **RabbitMQ Management**: http://localhost:15672
 
-## Локальна розробка
+## Local Development
 
 ### Backend (NestJS)
 
@@ -79,86 +79,86 @@ npm install
 npm start
 ```
 
-## Корисні команди
+## Useful Commands
 
-### Docker команди
+### Docker Commands
 
 ```bash
-# Запуск
+# Start
 make start
 
-# Зупинка
+# Stop
 make stop
 
-# Перезапуск
+# Restart
 make restart
 
-# Очищення
+# Clean
 make clean
 
-# Логи
+# Logs
 make logs
 
-# Статус
+# Status
 make status
 ```
 
-### База даних
+### Database
 
 ```bash
-# Скидання бази даних
+# Reset database
 make db-reset
 
-# Підключення до MongoDB
+# Connect to MongoDB
 docker-compose exec mongodb mongosh
 ```
 
-### Тестування
+### Testing
 
 ```bash
-# Всі тести
+# All tests
 make test
 
-# Тільки backend
+# Backend only
 cd backend && npm test
 
-# Тільки frontend
+# Frontend only
 cd frontend && npm test
 ```
 
-## Структура проекту
+## Project Structure
 
 ```
 comments-spa/
 ├── frontend/              # React SPA
 │   ├── src/
-│   │   ├── components/    # React компоненти
-│   │   ├── pages/         # Сторінки
+│   │   ├── components/    # React components
+│   │   ├── pages/         # Pages
 │   │   ├── hooks/         # Custom hooks
 │   │   ├── graphql/       # GraphQL queries/mutations
-│   │   └── utils/         # Утиліти
-│   ├── public/            # Статичні файли
+│   │   └── utils/         # Utilities
+│   ├── public/            # Static files
 │   ├── Dockerfile
 │   ├── package.json
 │   └── tsconfig.json
 ├── backend/               # NestJS API
 │   ├── src/
-│   │   ├── modules/       # Модулі (comments, users, files)
-│   │   ├── common/        # Спільні компоненти
-│   │   └── config/        # Конфігурація
+│   │   ├── modules/       # Modules (comments, users, files)
+│   │   ├── common/        # Shared components
+│   │   └── config/        # Configuration
 │   ├── Dockerfile
 │   ├── package.json
 │   ├── tsconfig.json
 │   └── nest-cli.json
-├── database-schema/       # MongoDB схеми
+├── database-schema/       # MongoDB schemas
 │   └── init-mongo.js
-├── docker-compose.yml     # Docker конфігурація
-├── Makefile              # Команди для зручності
+├── docker-compose.yml     # Docker configuration
+├── Makefile              # Convenience commands
 ├── README.md
 └── SETUP.md
 ```
 
-## Налаштування змінних середовища
+## Environment Variables Configuration
 
 ### Backend (.env)
 
@@ -192,42 +192,42 @@ REACT_APP_MAX_IMAGE_WIDTH=320
 REACT_APP_MAX_IMAGE_HEIGHT=240
 ```
 
-## Вирішення проблем
+## Troubleshooting
 
-### Порт вже використовується
+### Port Already in Use
 
 ```bash
-# Перевірити які процеси використовують порти
+# Check which processes are using ports
 netstat -tulpn | grep :3000
 netstat -tulpn | grep :3001
 
-# Зупинити сервіси
+# Stop services
 make stop
 ```
 
-### Проблеми з Docker
+### Docker Issues
 
 ```bash
-# Перезапуск Docker
+# Restart Docker
 sudo systemctl restart docker
 
-# Очищення Docker
+# Clean Docker
 docker system prune -a
 ```
 
-### Проблеми з базою даних
+### Database Issues
 
 ```bash
-# Скидання бази даних
+# Reset database
 make db-reset
 
-# Перевірка підключення
+# Check connection
 docker-compose exec mongodb mongosh --eval "db.adminCommand('ping')"
 ```
 
-## Розробка
+## Development
 
-### Додавання нових залежностей
+### Adding New Dependencies
 
 ```bash
 # Backend
@@ -239,7 +239,7 @@ cd frontend
 npm install <package-name>
 ```
 
-### Створення нових модулів (Backend)
+### Creating New Modules (Backend)
 
 ```bash
 cd backend
@@ -248,15 +248,15 @@ npm run generate service <service-name>
 npm run generate controller <controller-name>
 ```
 
-## Деплой
+## Deployment
 
 ### Production
 
 ```bash
-# Створення production збірки
+# Create production build
 make build
 
-# Запуск production
+# Run production
 make prod
 ```
 
@@ -267,11 +267,11 @@ make prod
 - Azure Container Instances
 - Yandex Cloud
 
-## Підтримка
+## Support
 
-При виникненні проблем:
+If you encounter issues:
 
-1. Перевірте логи: `make logs`
-2. Перевірте статус: `make status`
-3. Перезапустіть сервіси: `make restart`
-4. Очистіть систему: `make clean`
+1. Check logs: `make logs`
+2. Check status: `make status`
+3. Restart services: `make restart`
+4. Clean system: `make clean`
