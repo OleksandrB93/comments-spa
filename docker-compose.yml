@@ -1,0 +1,122 @@
+version: '3.8'
+
+services:
+  # MongoDB Database
+  mongodb:
+    image: mongo:7.0
+    container_name: comments-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password123
+      MONGO_INITDB_DATABASE: comments_db
+    volumes:
+      - mongodb_data:/data/db
+      - ./database-schema/init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js:ro
+    networks:
+      - comments-network
+
+  # Redis Cache
+  redis:
+    image: redis:7.2-alpine
+    container_name: comments-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes --requirepass redis123
+    volumes:
+      - redis_data:/data
+    networks:
+      - comments-network
+
+  # Elasticsearch
+  elasticsearch:
+    image: elasticsearch:8.11.0
+    container_name: comments-elasticsearch
+    restart: unless-stopped
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    networks:
+      - comments-network
+
+  # RabbitMQ Message Broker
+  rabbitmq:
+    image: rabbitmq:3.12-management
+    container_name: comments-rabbitmq
+    restart: unless-stopped
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: rabbit123
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - comments-network
+
+  # Backend (NestJS + GraphQL)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: comments-backend
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=development
+      - MONGODB_URI=mongodb://admin:password123@mongodb:27017/comments_db?authSource=admin
+      - REDIS_URL=redis://:redis123@redis:6379
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
+      - RABBITMQ_URL=amqp://admin:rabbit123@rabbitmq:5672
+      - JWT_SECRET=your-super-secret-jwt-key-change-in-production
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+      - ./uploads:/app/uploads
+    depends_on:
+      - mongodb
+      - redis
+      - elasticsearch
+      - rabbitmq
+    networks:
+      - comments-network
+
+  # Frontend (React)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: comments-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - REACT_APP_API_URL=http://localhost:3001/graphql
+      - REACT_APP_WS_URL=ws://localhost:3001/graphql
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+    networks:
+      - comments-network
+
+volumes:
+  mongodb_data:
+  redis_data:
+  elasticsearch_data:
+  rabbitmq_data:
+
+networks:
+  comments-network:
+    driver: bridge
