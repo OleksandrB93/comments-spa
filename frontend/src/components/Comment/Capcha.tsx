@@ -1,10 +1,20 @@
-import React, { useRef, useState, useEffect } from "react";
+import React, {
+  useRef,
+  useState,
+  useEffect,
+  useImperativeHandle,
+  forwardRef,
+} from "react";
 
 interface CaptchaProps {
-  onValidate: (isValid: boolean) => void;
+  onValidate: (isValid: boolean, captchaText: string) => void;
 }
 
-const Captcha: React.FC<CaptchaProps> = ({ onValidate }) => {
+export interface CaptchaRef {
+  reset: () => void;
+}
+
+const Captcha = forwardRef<CaptchaRef, CaptchaProps>(({ onValidate }, ref) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [captchaText, setCaptchaText] = useState("");
 
@@ -56,17 +66,27 @@ const Captcha: React.FC<CaptchaProps> = ({ onValidate }) => {
 
   const [inputValue, setInputValue] = useState("");
 
+  // Expose reset function to parent component
+  useImperativeHandle(ref, () => ({
+    reset: () => {
+      const text = generateCaptcha();
+      drawCaptcha(text);
+      setInputValue("");
+      onValidate(false, text);
+    },
+  }));
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setInputValue(value);
-    onValidate(value === captchaText);
+    onValidate(value === captchaText, captchaText);
   };
 
   const handleRefresh = () => {
     const text = generateCaptcha();
     drawCaptcha(text);
     setInputValue("");
-    onValidate(false);
+    onValidate(false, text);
   };
 
   return (
@@ -90,6 +110,8 @@ const Captcha: React.FC<CaptchaProps> = ({ onValidate }) => {
       </div>
     </div>
   );
-};
+});
+
+Captcha.displayName = "Captcha";
 
 export default Captcha;

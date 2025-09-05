@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { z } from "zod";
 import { formSchema } from "@/components/Post/PostWithComments";
@@ -13,20 +13,23 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import Captcha from "./Capcha";
+import Captcha, { type CaptchaRef } from "./Capcha";
 import { Textarea } from "../ui/textarea";
 
 interface CommentFormProps {
   onSubmit: (values: z.infer<typeof formSchema>) => void;
   placeholder?: string;
   buttonText?: string;
+  isLoading?: boolean;
 }
 
 const CommentForm: React.FC<CommentFormProps> = ({
   onSubmit,
   placeholder = "Write your comment...",
   buttonText = "Add comment",
+  isLoading = false,
 }) => {
+  const captchaRef = useRef<CaptchaRef>(null);
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -35,6 +38,7 @@ const CommentForm: React.FC<CommentFormProps> = ({
       homepage: "",
       text: "",
       captchaValid: false,
+      captchaText: "",
     },
   });
 
@@ -42,6 +46,8 @@ const CommentForm: React.FC<CommentFormProps> = ({
     onSubmit(values);
     // Reset form after successful submission
     form.reset();
+    // Reset captcha input
+    captchaRef.current?.reset();
   };
 
   return (
@@ -98,8 +104,10 @@ const CommentForm: React.FC<CommentFormProps> = ({
                   <FormItem>
                     <FormLabel>Captcha</FormLabel>
                     <Captcha
-                      onValidate={(isValid) => {
+                      ref={captchaRef}
+                      onValidate={(isValid, captchaText) => {
                         field.onChange(isValid);
+                        form.setValue("captchaText", captchaText);
                         if (!isValid) {
                           form.setError("captchaValid", {
                             message: "Please complete the captcha correctly",
@@ -138,11 +146,14 @@ const CommentForm: React.FC<CommentFormProps> = ({
               type="submit"
               disabled={
                 form.formState.isSubmitting ||
+                isLoading ||
                 !form.formState.isValid ||
                 !form.watch("captchaValid")
               }
             >
-              {form.formState.isSubmitting ? "Sending..." : buttonText}
+              {form.formState.isSubmitting || isLoading
+                ? "Sending..."
+                : buttonText}
             </Button>
           </div>
         </form>

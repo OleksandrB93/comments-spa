@@ -6,7 +6,12 @@ import CommentForm from "../Comment/CommentForm";
 import { z } from "zod";
 import { CREATE_COMMENT, CREATE_REPLY } from "@/graphql/mutations";
 import { useMutation } from "@apollo/client/react";
-import type { CreateCommentInput, CreateReplyInput } from "@/graphql/types";
+import type {
+  CreateCommentInput,
+  CreateReplyInput,
+  CreateCommentResponse,
+  CreateReplyResponse,
+} from "@/graphql/types";
 
 export const formSchema = z.object({
   username: z
@@ -25,6 +30,7 @@ export const formSchema = z.object({
   captchaValid: z.boolean().refine((val) => val === true, {
     message: "Please complete the captcha",
   }),
+  captchaText: z.string(),
 });
 
 interface PostWithCommentsProps {
@@ -37,8 +43,9 @@ const PostWithComments: React.FC<PostWithCommentsProps> = ({ post }) => {
 
   // GraphQL mutations
   const [createComment, { loading: creatingComment }] =
-    useMutation(CREATE_COMMENT);
-  const [createReply, { loading: creatingReply }] = useMutation(CREATE_REPLY);
+    useMutation<CreateCommentResponse>(CREATE_COMMENT);
+  const [createReply, { loading: creatingReply }] =
+    useMutation<CreateReplyResponse>(CREATE_REPLY);
 
   // Mock user for demonstration
   const currentUser: User = {
@@ -101,8 +108,25 @@ const PostWithComments: React.FC<PostWithCommentsProps> = ({ post }) => {
 
       console.log("Comment created successfully:", result.data);
 
-      // For now, just log to console as requested
-      // In the future, you can update the local state with the new comment
+      // Update local state with the new comment
+      if (result.data?.createComment) {
+        const newComment: CommentType = {
+          id: result.data.createComment.id,
+          content: result.data.createComment.content,
+          author: {
+            id: result.data.createComment.author.id,
+            username: result.data.createComment.author.username,
+            email: result.data.createComment.author.email,
+            homepage: result.data.createComment.author.homepage,
+          },
+          createdAt: result.data.createComment.createdAt,
+          votes: 0,
+          replies: [],
+        };
+
+        setComments((prev) => [...prev, newComment]);
+        console.log("Comment added to local state successfully");
+      }
     } catch (error) {
       console.error("Error creating comment:", error);
     }
@@ -129,8 +153,44 @@ const PostWithComments: React.FC<PostWithCommentsProps> = ({ post }) => {
 
       console.log("Reply created successfully:", result.data);
 
-      // For now, just log to console as requested
-      // In the future, you can update the local state with the new reply
+      // Update local state with the new reply
+      if (result.data?.createReply) {
+        const newReply: CommentType = {
+          id: result.data.createReply.id,
+          content: result.data.createReply.content,
+          author: {
+            id: result.data.createReply.author.id,
+            username: result.data.createReply.author.username,
+            email: result.data.createReply.author.email,
+            homepage: result.data.createReply.author.homepage,
+          },
+          createdAt: result.data.createReply.createdAt,
+          votes: 0,
+          replies: [],
+        };
+
+        // Add reply to the parent comment
+        const addReplyToComment = (comments: CommentType[]): CommentType[] => {
+          return comments.map((comment) => {
+            if (comment.id === parentId) {
+              return {
+                ...comment,
+                replies: [...(comment.replies || []), newReply],
+              };
+            }
+            if (comment.replies) {
+              return {
+                ...comment,
+                replies: addReplyToComment(comment.replies),
+              };
+            }
+            return comment;
+          });
+        };
+
+        setComments(addReplyToComment(comments));
+        console.log("Reply added to local state successfully");
+      }
     } catch (error) {
       console.error("Error creating reply:", error);
     }
@@ -148,7 +208,7 @@ const PostWithComments: React.FC<PostWithCommentsProps> = ({ post }) => {
         </h3>
 
         {/* Add new comment form */}
-        <CommentForm onSubmit={handleAddComment} />
+        <CommentForm onSubmit={handleAddComment} isLoading={creatingComment} />
 
         {/* Comments list */}
         <div className="space-y-4">
@@ -158,6 +218,7 @@ const PostWithComments: React.FC<PostWithCommentsProps> = ({ post }) => {
               comment={comment}
               onVote={handleCommentVote}
               onReply={handleReplyToComment}
+              isCreatingReply={creatingReply}
             />
           ))}
         </div>

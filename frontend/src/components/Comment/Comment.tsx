@@ -17,6 +17,7 @@ interface CommentProps {
   onVote: (commentId: string, type: "upvote" | "downvote") => void;
   onReply: (parentId: string, content: string) => void;
   depth?: number;
+  isCreatingReply?: boolean;
 }
 
 const Comment: React.FC<CommentProps> = ({
@@ -24,9 +25,9 @@ const Comment: React.FC<CommentProps> = ({
   onVote,
   onReply,
   depth = 0,
+  isCreatingReply = false,
 }) => {
   const [showReplyForm, setShowReplyForm] = useState(false);
-  const [replyContent, setReplyContent] = useState("");
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -39,12 +40,9 @@ const Comment: React.FC<CommentProps> = ({
     });
   };
 
-  const handleReply = () => {
-    if (replyContent.trim()) {
-      onReply(comment.id, replyContent);
-      setReplyContent("");
-      setShowReplyForm(false);
-    }
+  const handleReply = (values: any) => {
+    onReply(comment.id, values.text);
+    setShowReplyForm(false);
   };
 
   const maxDepth = 3; // Maximum depth of nesting
@@ -155,7 +153,12 @@ const Comment: React.FC<CommentProps> = ({
 
         {/* Reply form */}
         {showReplyForm && shouldShowReply && (
-          <CommentForm onSubmit={handleReply} />
+          <CommentForm
+            onSubmit={handleReply}
+            placeholder="Write your reply..."
+            buttonText="Reply"
+            isLoading={isCreatingReply}
+          />
         )}
       </div>
 
@@ -169,6 +172,7 @@ const Comment: React.FC<CommentProps> = ({
               onVote={onVote}
               onReply={onReply}
               depth={depth + 1}
+              isCreatingReply={isCreatingReply}
             />
           ))}
         </div>
