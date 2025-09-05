@@ -15,7 +15,11 @@ import CommentForm from "./CommentForm";
 interface CommentProps {
   comment: CommentType;
   onVote: (commentId: string, type: "upvote" | "downvote") => void;
-  onReply: (parentId: string, content: string) => void;
+  onReply: (
+    parentId: string,
+    content: string,
+    author: { username: string; email: string; homepage?: string }
+  ) => void;
   depth?: number;
   isCreatingReply?: boolean;
 }
@@ -41,7 +45,11 @@ const Comment: React.FC<CommentProps> = ({
   };
 
   const handleReply = (values: any) => {
-    onReply(comment.id, values.text);
+    onReply(comment.id, values.text, {
+      username: values.username,
+      email: values.email,
+      homepage: values.homepage,
+    });
     setShowReplyForm(false);
   };
 

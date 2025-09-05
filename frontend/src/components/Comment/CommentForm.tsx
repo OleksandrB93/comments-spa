@@ -1,7 +1,6 @@
 import React, { useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { z } from "zod";
-import { formSchema } from "@/components/Post/PostWithComments";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import {
@@ -15,6 +14,7 @@ import {
 import { Input } from "@/components/ui/input";
 import Captcha, { type CaptchaRef } from "./Capcha";
 import { Textarea } from "../ui/textarea";
+import { formSchema } from "@/utils/utils";
 
 interface CommentFormProps {
   onSubmit: (values: z.infer<typeof formSchema>) => void;

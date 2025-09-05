@@ -24,6 +24,7 @@ export class CommentResolver {
 
   @Query(() => [Comment])
   async comments(@Args('postId') postId: string): Promise<Comment[]> {
-    return this.commentService.getComments(postId);
+    const result = await this.commentService.getComments(postId);
+    return result;
   }
 }

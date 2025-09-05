@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import type { Post as PostType, Comment as CommentType, User } from "@/types";
+import type { Post as PostType, Comment as CommentType } from "@/types";
 import Post from "./Post";
 import Comment from "../Comment/Comment";
 import CommentForm from "../Comment/CommentForm";
@@ -8,32 +8,11 @@ import { CREATE_COMMENT, CREATE_REPLY } from "@/graphql/mutations";
 import { GET_COMMENTS } from "@/graphql/queries";
 import { useMutation, useQuery } from "@apollo/client/react";
 import type {
-  CreateCommentInput,
-  CreateReplyInput,
   CreateCommentResponse,
   CreateReplyResponse,
   GetCommentsResponse,
 } from "@/graphql/types";
-
-export const formSchema = z.object({
-  username: z
-    .string()
-    .min(2)
-    .max(50)
-    .regex(/^[A-Za-z0-9]+$/, { message: "Only Latin letters and numbers" }),
-  email: z.email({ message: "Invalid email address" }),
-  homepage: z
-    .string()
-    .refine((val) => val === "" || z.url().safeParse(val).success, {
-      message: "Invalid homepage URL",
-    })
-    .optional(),
-  text: z.string().min(1).max(1000),
-  captchaValid: z.boolean().refine((val) => val === true, {
-    message: "Please complete the captcha",
-  }),
-  captchaText: z.string(),
-});
+import type { formSchema } from "@/utils/utils";
 
 interface PostWithCommentsProps {
   post: PostType;
@@ -47,56 +26,63 @@ const PostWithComments: React.FC<PostWithCommentsProps> = ({ post }) => {
     data: commentsData,
     loading: loadingComments,
     refetch: refetchComments,
+    error: commentsError,
   } = useQuery<GetCommentsResponse>(GET_COMMENTS, {
     variables: { postId: post.id },
     errorPolicy: "all",
   });
+
+  console.log("PostWithComments - commentsError:", commentsError);
 
   const [createComment, { loading: creatingComment }] =
     useMutation<CreateCommentResponse>(CREATE_COMMENT);
   const [createReply, { loading: creatingReply }] =
     useMutation<CreateReplyResponse>(CREATE_REPLY);
 
-  // Use comments from GraphQL query or fallback to post.comments
-  const comments: CommentType[] =
-    commentsData?.comments?.map((comment) => ({
-      id: comment.id,
-      content: comment.content,
-      author: {
-        id: comment.author.id,
-        username: comment.author.username,
-        email: comment.author.email,
-        homepage: comment.author.homepage,
-      },
-      createdAt: comment.createdAt,
-      votes: 0, // Default votes for now
-      replies:
-        comment.replies?.map((reply) => ({
-          id: reply.id,
-          content: reply.content,
-          author: {
-            id: reply.author.id,
-            username: reply.author.username,
-            email: reply.author.email,
-            homepage: reply.author.homepage,
-          },
-          createdAt: reply.createdAt,
-          votes: 0,
-          replies: [],
-        })) || [],
-    })) ||
-    post.comments ||
-    [];
+  // Recursive function to build nested comment structure
+  const buildNestedComments = (
+    parentId: string | null,
+    allComments: any[]
+  ): CommentType[] => {
+    return allComments
+      .filter((comment) => comment.parentId === parentId)
+      .map((comment) => {
+        const replies = buildNestedComments(comment.id, allComments);
 
-  // Mock user for demonstration
-  const currentUser: User = {
-    id: "current-user",
-    username: "Current user",
+        return {
+          id: comment.id,
+          content: comment.content,
+          author: {
+            id: comment.author.id,
+            username: comment.author.username,
+            email: comment.author.email,
+            homepage: comment.author.homepage,
+          },
+          createdAt: comment.createdAt,
+          votes: 0, // Default votes for now
+          replies: replies,
+        };
+      });
   };
 
+  // Use comments from GraphQL query or fallback to post.comments
+  const comments: CommentType[] = (() => {
+    if (!commentsData?.comments) {
+      return post.comments || [];
+    }
+
+    // Group comments properly - GraphQL returns all comments as separate elements
+    // We need to group replies under their parent comments recursively
+    const allComments = commentsData.comments;
+
+    // Build nested structure starting from top-level comments (parentId = null)
+    const nestedComments = buildNestedComments(null, allComments);
+
+    return nestedComments;
+  })();
+
   const handlePostVote = (postId: string, type: "upvote" | "downvote") => {
-    const id = postId;
-    console.log(id);
+    console.log(postId);
 
     setCurrentPost((prev) => ({
       ...prev,
@@ -116,56 +102,47 @@ const PostWithComments: React.FC<PostWithCommentsProps> = ({ post }) => {
 
   const handleAddComment = async (values: z.infer<typeof formSchema>) => {
     try {
-      const input: CreateCommentInput = {
-        postId: currentPost.id,
-        content: values.text,
-        author: {
-          username: values.username,
-          email: values.email,
-          homepage: values.homepage || undefined,
-        },
-      };
-
-      console.log("Sending comment to GraphQL:", input);
-
       const result = await createComment({
-        variables: { input },
+        variables: {
+          input: {
+            postId: post.id,
+            content: values.text,
+            author: {
+              username: values.username,
+              email: values.email,
+              homepage: values.homepage || undefined,
+            },
+          },
+        },
       });
 
-      console.log("Comment created successfully:", result.data);
-
-      // Refetch comments from database to get the latest data
-      await refetchComments();
-      console.log("Comments refetched from database");
     } catch (error) {
       console.error("Error creating comment:", error);
     }
   };
 
-  const handleReplyToComment = async (parentId: string, content: string) => {
+  const handleReplyToComment = async (
+    parentId: string,
+    content: string,
+    author: { username: string; email: string; homepage?: string }
+  ) => {
     try {
-      const input: CreateReplyInput = {
-        postId: currentPost.id,
-        parentId,
-        content,
-        author: {
-          username: currentUser.username,
-          email: "user@example.com", // You might want to get this from context
-          homepage: undefined,
-        },
-      };
-
-      console.log("Sending reply to GraphQL:", input);
-
       const result = await createReply({
-        variables: { input },
+        variables: {
+          input: {
+            postId: post.id,
+            parentId: parentId,
+            content: content,
+            author: {
+              username: author.username,
+              email: author.email,
+              homepage: author.homepage,
+            },
+          },
+        },
       });
 
-      console.log("Reply created successfully:", result.data);
-
-      // Refetch comments from database to get the latest data
       await refetchComments();
-      console.log("Comments refetched from database after reply");
     } catch (error) {
       console.error("Error creating reply:", error);
     }
@@ -201,7 +178,9 @@ const PostWithComments: React.FC<PostWithCommentsProps> = ({ post }) => {
                 key={comment.id}
                 comment={comment}
                 onVote={handleCommentVote}
-                onReply={handleReplyToComment}
+                onReply={(parentId, content, author) =>
+                  handleReplyToComment(parentId, content, author)
+                }
                 isCreatingReply={creatingReply}
               />
             ))

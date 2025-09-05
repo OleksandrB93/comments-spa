@@ -23,7 +23,6 @@ export const GET_COMMENTS = gql`
           homepage
         }
         createdAt
-        parentId
       }
     }
   }

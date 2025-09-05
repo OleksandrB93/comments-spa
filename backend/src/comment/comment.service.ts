@@ -26,7 +26,6 @@ export class CommentService {
     });
 
     const savedComment = await newComment.save();
-    console.log('Comment created in MongoDB:', savedComment);
 
     return this.mapToGraphQLComment(savedComment);
   }
@@ -44,18 +43,40 @@ export class CommentService {
     });
 
     const savedReply = await newReply.save();
-    console.log('Reply created in MongoDB:', savedReply);
 
     return this.mapToGraphQLComment(savedReply);
   }
 
   async getComments(postId: string): Promise<GraphQLComment[]> {
+    // Get only top-level comments (no parentId or parentId is null)
     const comments = await this.commentModel
-      .find({ postId, parentId: null })
+      .find({
+        postId,
+        $or: [{ parentId: null }, { parentId: { $exists: false } }],
+      })
       .sort({ createdAt: -1 })
       .exec();
 
-    return comments.map((comment) => this.mapToGraphQLComment(comment));
+    // For each comment, get its replies
+    const commentsWithReplies = await Promise.all(
+      comments.map(async (comment) => {
+        const replies = await this.commentModel
+          .find({ parentId: comment._id })
+          .sort({ createdAt: 1 })
+          .exec();
+
+        return {
+          ...comment.toObject(),
+          replies: replies,
+        };
+      }),
+    );
+
+    const result = commentsWithReplies.map((comment) =>
+      this.mapToGraphQLComment(comment),
+    );
+
+    return result;
   }
 
   async getCommentById(id: string): Promise<GraphQLComment | null> {
@@ -73,12 +94,12 @@ export class CommentService {
     return comments.map((comment) => this.mapToGraphQLComment(comment));
   }
 
-  private mapToGraphQLComment(comment: CommentDocument): GraphQLComment {
+  private mapToGraphQLComment(comment: any): GraphQLComment {
     return {
       id: comment._id.toString(),
       content: comment.content,
       author: {
-        id: comment._id.toString(), // Using comment ID as author ID for now
+        id: comment.author._id?.toString() || comment._id.toString(), // Use author ID if available, fallback to comment ID
         username: comment.author.username,
         email: comment.author.email,
         homepage: comment.author.homepage,
@@ -86,7 +107,9 @@ export class CommentService {
       createdAt: comment.createdAt.toISOString(),
       parentId: comment.parentId?.toString(),
       postId: comment.postId,
-      replies: [], // We'll implement nested replies later
+      replies:
+        comment.replies?.map((reply: any) => this.mapToGraphQLComment(reply)) ||
+        [],
     };
   }
 }
