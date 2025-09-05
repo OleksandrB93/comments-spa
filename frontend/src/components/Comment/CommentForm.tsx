@@ -7,7 +7,6 @@ import { useForm } from "react-hook-form";
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -41,6 +40,8 @@ const CommentForm: React.FC<CommentFormProps> = ({
 
   const handleSubmit = (values: z.infer<typeof formSchema>) => {
     onSubmit(values);
+    // Reset form after successful submission
+    form.reset();
   };
 
   return (
@@ -123,7 +124,7 @@ const CommentForm: React.FC<CommentFormProps> = ({
                 <FormLabel>Text</FormLabel>
                 <FormControl>
                   <Textarea
-                    placeholder="Write your comment..."
+                    placeholder={placeholder}
                     className="resize-none"
                     {...field}
                   />
@@ -141,7 +142,7 @@ const CommentForm: React.FC<CommentFormProps> = ({
                 !form.watch("captchaValid")
               }
             >
-              {buttonText}
+              {form.formState.isSubmitting ? "Sending..." : buttonText}
             </Button>
           </div>
         </form>

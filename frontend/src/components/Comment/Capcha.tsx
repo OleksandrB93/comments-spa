@@ -70,7 +70,7 @@ const Captcha: React.FC<CaptchaProps> = ({ onValidate }) => {
   };
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-4">
       <canvas ref={canvasRef} width={150} height={50} />
       <div className="flex gap-2">
         <input

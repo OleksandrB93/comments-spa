@@ -1,10 +1,12 @@
+import { ApolloProvider } from "@apollo/client/react";
 import { ThemeProvider } from "./ThemeProvider";
+import { apolloClient } from "@/lib/apollo-client";
 
 const MainWrapper = ({ children }: { children: React.ReactNode }) => {
   return (
-    <div>
+    <ApolloProvider client={apolloClient}>
       <ThemeProvider>{children}</ThemeProvider>
-    </div>
+    </ApolloProvider>
   );
 };
 

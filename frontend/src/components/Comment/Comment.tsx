@@ -155,34 +155,6 @@ const Comment: React.FC<CommentProps> = ({
 
         {/* Reply form */}
         {showReplyForm && shouldShowReply && (
-          // <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-          //   <textarea
-          //     value={replyContent}
-          //     onChange={(e) => setReplyContent(e.target.value)}
-          //     placeholder="Write your reply..."
-          //     className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-md resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-800 dark:text-white"
-          //     rows={3}
-          //   />
-          //   <div className="flex justify-end space-x-2 mt-3">
-          //     <Button
-          //       variant="outline"
-          //       size="sm"
-          //       onClick={() => {
-          //         setShowReplyForm(false);
-          //         setReplyContent("");
-          //       }}
-          //     >
-          //       Cancel
-          //     </Button>
-          //     <Button
-          //       size="sm"
-          //       onClick={handleReply}
-          //       disabled={!replyContent.trim()}
-          //     >
-          //       Reply
-          //     </Button>
-          //   </div>
-          // </div>
           <CommentForm onSubmit={handleReply} />
         )}
       </div>

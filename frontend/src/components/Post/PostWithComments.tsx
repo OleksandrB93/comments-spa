@@ -4,6 +4,9 @@ import Post from "./Post";
 import Comment from "../Comment/Comment";
 import CommentForm from "../Comment/CommentForm";
 import { z } from "zod";
+import { CREATE_COMMENT, CREATE_REPLY } from "@/graphql/mutations";
+import { useMutation } from "@apollo/client/react";
+import type { CreateCommentInput, CreateReplyInput } from "@/graphql/types";
 
 export const formSchema = z.object({
   username: z
@@ -31,6 +34,11 @@ interface PostWithCommentsProps {
 const PostWithComments: React.FC<PostWithCommentsProps> = ({ post }) => {
   const [currentPost, setCurrentPost] = useState<PostType>(post);
   const [comments, setComments] = useState<CommentType[]>(post.comments || []);
+
+  // GraphQL mutations
+  const [createComment, { loading: creatingComment }] =
+    useMutation(CREATE_COMMENT);
+  const [createReply, { loading: creatingReply }] = useMutation(CREATE_REPLY);
 
   // Mock user for demonstration
   const currentUser: User = {
@@ -73,39 +81,59 @@ const PostWithComments: React.FC<PostWithCommentsProps> = ({ post }) => {
     setComments(updateVotes(comments));
   };
 
-  const handleAddComment = (values: z.infer<typeof formSchema>) => {
-    console.log(values);
+  const handleAddComment = async (values: z.infer<typeof formSchema>) => {
+    try {
+      const input: CreateCommentInput = {
+        postId: currentPost.id,
+        content: values.text,
+        author: {
+          username: values.username,
+          email: values.email,
+          homepage: values.homepage || undefined,
+        },
+      };
+
+      console.log("Sending comment to GraphQL:", input);
+
+      const result = await createComment({
+        variables: { input },
+      });
+
+      console.log("Comment created successfully:", result.data);
+
+      // For now, just log to console as requested
+      // In the future, you can update the local state with the new comment
+    } catch (error) {
+      console.error("Error creating comment:", error);
+    }
   };
 
-  const handleReplyToComment = (parentId: string, content: string) => {
-    const newReply: CommentType = {
-      id: `reply-${Date.now()}`,
-      content,
-      author: currentUser,
-      createdAt: new Date().toISOString(),
-      votes: 0,
-      parentId,
-    };
+  const handleReplyToComment = async (parentId: string, content: string) => {
+    try {
+      const input: CreateReplyInput = {
+        postId: currentPost.id,
+        parentId,
+        content,
+        author: {
+          username: currentUser.username,
+          email: "user@example.com", // You might want to get this from context
+          homepage: undefined,
+        },
+      };
 
-    const addReply = (comments: CommentType[]): CommentType[] => {
-      return comments.map((comment) => {
-        if (comment.id === parentId) {
-          return {
-            ...comment,
-            replies: [...(comment.replies || []), newReply],
-          };
-        }
-        if (comment.replies) {
-          return {
-            ...comment,
-            replies: addReply(comment.replies),
-          };
-        }
-        return comment;
+      console.log("Sending reply to GraphQL:", input);
+
+      const result = await createReply({
+        variables: { input },
       });
-    };
 
-    setComments(addReply(comments));
+      console.log("Reply created successfully:", result.data);
+
+      // For now, just log to console as requested
+      // In the future, you can update the local state with the new reply
+    } catch (error) {
+      console.error("Error creating reply:", error);
+    }
   };
 
   return (
