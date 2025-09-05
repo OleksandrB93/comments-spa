@@ -25,6 +25,14 @@ input CommentAuthorInput {
   username: String!
 }
 
+type CommentsResponse {
+  comments: [Comment!]!
+  limit: Int!
+  page: Int!
+  totalCount: Int!
+  totalPages: Int!
+}
+
 input CreateCommentInput {
   author: CommentAuthorInput!
   content: String!
@@ -45,4 +53,5 @@ type Mutation {
 
 type Query {
   comments(postId: String!): [Comment!]!
+  commentsPaginated(limit: Int! = 25, page: Int! = 1, postId: String!): CommentsResponse!
 }

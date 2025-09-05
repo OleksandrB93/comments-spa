@@ -47,3 +47,13 @@ export interface CreateReplyResponse {
 export interface GetCommentsResponse {
   comments: GraphQLComment[];
 }
+
+export interface CommentsPaginatedResponse {
+  commentsPaginated: {
+    comments: GraphQLComment[];
+    totalCount: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+}

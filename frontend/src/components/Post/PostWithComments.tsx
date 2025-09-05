@@ -1,16 +1,14 @@
 import React, { useState } from "react";
-import type { Post as PostType, Comment as CommentType } from "@/types";
+import type { Post as PostType } from "@/types";
 import Post from "./Post";
 import CommentForm from "../Comment/CommentForm";
 import CommentsTable from "../Comment/CommentsTable";
 import { z } from "zod";
 import { CREATE_COMMENT, CREATE_REPLY } from "@/graphql/mutations";
-import { GET_COMMENTS } from "@/graphql/queries";
-import { useMutation, useQuery } from "@apollo/client/react";
+import { useMutation } from "@apollo/client/react";
 import type {
   CreateCommentResponse,
   CreateReplyResponse,
-  GetCommentsResponse,
 } from "@/graphql/types";
 import type { formSchema } from "@/utils/utils";
 
@@ -21,65 +19,16 @@ interface PostWithCommentsProps {
 const PostWithComments: React.FC<PostWithCommentsProps> = ({ post }) => {
   const [currentPost, setCurrentPost] = useState<PostType>(post);
 
-  // GraphQL queries and mutations
-  const {
-    data: commentsData,
-    loading: loadingComments,
-    refetch: refetchComments,
-  } = useQuery<GetCommentsResponse>(GET_COMMENTS, {
-    variables: { postId: post.id },
-    errorPolicy: "all",
-  });
+  // GraphQL mutations
+  // Note: CommentsTable now handles its own data fetching
 
   const [createComment, { loading: creatingComment }] =
     useMutation<CreateCommentResponse>(CREATE_COMMENT);
   const [createReply, { loading: creatingReply }] =
     useMutation<CreateReplyResponse>(CREATE_REPLY);
 
-  // Recursive function to build nested comment structure
-  const buildNestedComments = (
-    parentId: string | null,
-    allComments: any[]
-  ): CommentType[] => {
-    return allComments
-      .filter((comment) => comment.parentId === parentId)
-      .map((comment) => {
-        const replies = buildNestedComments(comment.id, allComments);
-
-        return {
-          id: comment.id,
-          content: comment.content,
-          author: {
-            id: comment.author.id,
-            username: comment.author.username,
-            email: comment.author.email,
-            homepage: comment.author.homepage,
-          },
-          createdAt: comment.createdAt,
-          votes: 0, // Default votes for now
-          replies: replies,
-        };
-      });
-  };
-
-  // Use comments from GraphQL query or fallback to post.comments
-  const comments: CommentType[] = (() => {
-    if (!commentsData?.comments) {
-      return post.comments || [];
-    }
-
-    // Group comments properly - GraphQL returns all comments as separate elements
-    // We need to group replies under their parent comments recursively
-    const allComments = commentsData.comments;
-
-    // Build nested structure starting from top-level comments (parentId = null)
-    const nestedComments = buildNestedComments(null, allComments);
-
-    return nestedComments;
-  })();
-
-  // Get only top-level comments for table display
-  const topLevelComments = comments.filter((comment) => !comment.parentId);
+  // For backward compatibility, we'll keep the old logic but it's not used anymore
+  // since CommentsTable now handles its own data fetching
 
   const handlePostVote = (_postId: string, type: "upvote" | "downvote") => {
     setCurrentPost((prev) => ({
@@ -94,7 +43,7 @@ const PostWithComments: React.FC<PostWithCommentsProps> = ({ post }) => {
   ) => {
     // For now, just refetch comments to get updated vote counts
     // In the future, you might want to implement a vote mutation
-    await refetchComments();
+    // Note: CommentsTable will handle its own data refetching
   };
 
   const handleAddComment = async (values: z.infer<typeof formSchema>) => {
@@ -113,7 +62,8 @@ const PostWithComments: React.FC<PostWithCommentsProps> = ({ post }) => {
         },
       });
 
-      await refetchComments();
+      // Note: CommentsTable will automatically refetch its data
+      // No need to manually refetch since it uses useQuery
     } catch (error) {
       console.error("Error creating comment:", error);
     }
@@ -140,7 +90,8 @@ const PostWithComments: React.FC<PostWithCommentsProps> = ({ post }) => {
         },
       });
 
-      await refetchComments();
+      // Note: CommentsTable will automatically refetch its data
+      // No need to manually refetch since it uses useQuery
     } catch (error) {
       console.error("Error creating reply:", error);
     }
@@ -154,29 +105,19 @@ const PostWithComments: React.FC<PostWithCommentsProps> = ({ post }) => {
       {/* Comments section */}
       <div className="space-y-4">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-          Comments ({loadingComments ? "..." : topLevelComments.length})
+          Comments
         </h3>
 
         {/* Add new comment form */}
         <CommentForm onSubmit={handleAddComment} isLoading={creatingComment} />
 
         {/* Comments table */}
-        {loadingComments ? (
-          <div className="text-center py-4 text-gray-500 dark:text-gray-400">
-            Loading comments...
-          </div>
-        ) : topLevelComments.length === 0 ? (
-          <div className="text-center py-4 text-gray-500 dark:text-gray-400">
-            No comments yet. Be the first to comment!
-          </div>
-        ) : (
-          <CommentsTable
-            comments={topLevelComments}
-            onVote={handleCommentVote}
-            onReply={handleReplyToComment}
-            isCreatingReply={creatingReply}
-          />
-        )}
+        <CommentsTable
+          postId={post.id}
+          onVote={handleCommentVote}
+          onReply={handleReplyToComment}
+          isCreatingReply={creatingReply}
+        />
       </div>
     </div>
   );

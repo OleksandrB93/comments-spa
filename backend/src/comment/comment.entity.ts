@@ -1,4 +1,4 @@
-import { ObjectType, Field, ID, InputType } from '@nestjs/graphql';
+import { ObjectType, Field, ID, InputType, Int } from '@nestjs/graphql';
 
 @InputType()
 export class CommentAuthorInput {
@@ -76,4 +76,22 @@ export class CreateReplyInput {
 
   @Field(() => CommentAuthorInput)
   author: CommentAuthorInput;
+}
+
+@ObjectType()
+export class CommentsResponse {
+  @Field(() => [Comment])
+  comments: Comment[];
+
+  @Field(() => Int)
+  totalCount: number;
+
+  @Field(() => Int)
+  page: number;
+
+  @Field(() => Int)
+  limit: number;
+
+  @Field(() => Int)
+  totalPages: number;
 }

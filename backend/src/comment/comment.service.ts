@@ -5,6 +5,7 @@ import {
   CreateCommentInput,
   CreateReplyInput,
   Comment as GraphQLComment,
+  CommentsResponse,
 } from './comment.entity';
 import { Comment, CommentDocument } from './schemas/comment.schema';
 
@@ -77,6 +78,62 @@ export class CommentService {
     );
 
     return result;
+  }
+
+  async getCommentsPaginated(
+    postId: string,
+    page: number = 1,
+    limit: number = 25,
+  ): Promise<CommentsResponse> {
+    const skip = (page - 1) * limit;
+
+    // Get total count of top-level comments
+    const totalCount = await this.commentModel
+      .countDocuments({
+        postId,
+        $or: [{ parentId: null }, { parentId: { $exists: false } }],
+      })
+      .exec();
+
+    // Get paginated top-level comments
+    const comments = await this.commentModel
+      .find({
+        postId,
+        $or: [{ parentId: null }, { parentId: { $exists: false } }],
+      })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .exec();
+
+    // For each comment, get its replies
+    const commentsWithReplies = await Promise.all(
+      comments.map(async (comment) => {
+        const replies = await this.commentModel
+          .find({ parentId: comment._id })
+          .sort({ createdAt: 1 })
+          .exec();
+
+        return {
+          ...comment.toObject(),
+          replies: replies,
+        };
+      }),
+    );
+
+    const mappedComments = commentsWithReplies.map((comment) =>
+      this.mapToGraphQLComment(comment),
+    );
+
+    const totalPages = Math.ceil(totalCount / limit);
+
+    return {
+      comments: mappedComments,
+      totalCount,
+      page,
+      limit,
+      totalPages,
+    };
   }
 
   async getCommentById(id: string): Promise<GraphQLComment | null> {

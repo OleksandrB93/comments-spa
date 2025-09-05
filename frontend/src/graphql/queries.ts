@@ -27,3 +27,37 @@ export const GET_COMMENTS = gql`
     }
   }
 `;
+
+export const GET_COMMENTS_PAGINATED = gql`
+  query GetCommentsPaginated($postId: String!, $page: Int!, $limit: Int!) {
+    commentsPaginated(postId: $postId, page: $page, limit: $limit) {
+      comments {
+        id
+        content
+        author {
+          id
+          username
+          email
+          homepage
+        }
+        createdAt
+        parentId
+        replies {
+          id
+          content
+          author {
+            id
+            username
+            email
+            homepage
+          }
+          createdAt
+        }
+      }
+      totalCount
+      page
+      limit
+      totalPages
+    }
+  }
+`;
