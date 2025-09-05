@@ -55,7 +55,7 @@ const Comment: React.FC<CommentProps> = ({
 
   return (
     <div
-      className={`${"ml-8 border-l-2 border-gray-200 dark:border-gray-700 pl-4"}`}
+      className={`${"border-l-2 border-gray-200 dark:border-gray-700 pl-4"}`}
     >
       <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 mb-4">
         {/* Header */}

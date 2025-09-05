@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 import type { Post as PostType, Comment as CommentType } from "@/types";
 import Post from "./Post";
-import Comment from "../Comment/Comment";
 import CommentForm from "../Comment/CommentForm";
+import CommentsTable from "../Comment/CommentsTable";
 import { z } from "zod";
 import { CREATE_COMMENT, CREATE_REPLY } from "@/graphql/mutations";
 import { GET_COMMENTS } from "@/graphql/queries";
@@ -78,6 +78,9 @@ const PostWithComments: React.FC<PostWithCommentsProps> = ({ post }) => {
     return nestedComments;
   })();
 
+  // Get only top-level comments for table display
+  const topLevelComments = comments.filter((comment) => !comment.parentId);
+
   const handlePostVote = (_postId: string, type: "upvote" | "downvote") => {
     setCurrentPost((prev) => ({
       ...prev,
@@ -122,20 +125,20 @@ const PostWithComments: React.FC<PostWithCommentsProps> = ({ post }) => {
     author: { username: string; email: string; homepage?: string }
   ) => {
     try {
-      // await createReply({
-      //   variables: {
-      //     input: {
-      //       postId: post.id,
-      //       parentId: parentId,
-      //       content: content,
-      //       author: {
-      //         username: author.username,
-      //         email: author.email,
-      //         homepage: author.homepage,
-      //       },
-      //     },
-      //   },
-      // });
+      await createReply({
+        variables: {
+          input: {
+            postId: post.id,
+            parentId: parentId,
+            content: content,
+            author: {
+              username: author.username,
+              email: author.email,
+              homepage: author.homepage,
+            },
+          },
+        },
+      });
 
       await refetchComments();
     } catch (error) {
@@ -151,36 +154,29 @@ const PostWithComments: React.FC<PostWithCommentsProps> = ({ post }) => {
       {/* Comments section */}
       <div className="space-y-4">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-          Comments ({loadingComments ? "..." : comments.length})
+          Comments ({loadingComments ? "..." : topLevelComments.length})
         </h3>
 
         {/* Add new comment form */}
         <CommentForm onSubmit={handleAddComment} isLoading={creatingComment} />
 
-        {/* Comments list */}
-        <div className="space-y-4">
-          {loadingComments ? (
-            <div className="text-center py-4 text-gray-500 dark:text-gray-400">
-              Loading comments...
-            </div>
-          ) : comments.length === 0 ? (
-            <div className="text-center py-4 text-gray-500 dark:text-gray-400">
-              No comments yet. Be the first to comment!
-            </div>
-          ) : (
-            comments.map((comment) => (
-              <Comment
-                key={comment.id}
-                comment={comment}
-                onVote={handleCommentVote}
-                onReply={(parentId, content, author) =>
-                  handleReplyToComment(parentId, content, author)
-                }
-                isCreatingReply={creatingReply}
-              />
-            ))
-          )}
-        </div>
+        {/* Comments table */}
+        {loadingComments ? (
+          <div className="text-center py-4 text-gray-500 dark:text-gray-400">
+            Loading comments...
+          </div>
+        ) : topLevelComments.length === 0 ? (
+          <div className="text-center py-4 text-gray-500 dark:text-gray-400">
+            No comments yet. Be the first to comment!
+          </div>
+        ) : (
+          <CommentsTable
+            comments={topLevelComments}
+            onVote={handleCommentVote}
+            onReply={handleReplyToComment}
+            isCreatingReply={creatingReply}
+          />
+        )}
       </div>
     </div>
   );
