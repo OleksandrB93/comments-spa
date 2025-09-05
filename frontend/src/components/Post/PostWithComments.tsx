@@ -26,13 +26,10 @@ const PostWithComments: React.FC<PostWithCommentsProps> = ({ post }) => {
     data: commentsData,
     loading: loadingComments,
     refetch: refetchComments,
-    error: commentsError,
   } = useQuery<GetCommentsResponse>(GET_COMMENTS, {
     variables: { postId: post.id },
     errorPolicy: "all",
   });
-
-  console.log("PostWithComments - commentsError:", commentsError);
 
   const [createComment, { loading: creatingComment }] =
     useMutation<CreateCommentResponse>(CREATE_COMMENT);
@@ -81,9 +78,7 @@ const PostWithComments: React.FC<PostWithCommentsProps> = ({ post }) => {
     return nestedComments;
   })();
 
-  const handlePostVote = (postId: string, type: "upvote" | "downvote") => {
-    console.log(postId);
-
+  const handlePostVote = (_postId: string, type: "upvote" | "downvote") => {
     setCurrentPost((prev) => ({
       ...prev,
       votes: type === "upvote" ? prev.votes + 1 : prev.votes - 1,
@@ -91,18 +86,17 @@ const PostWithComments: React.FC<PostWithCommentsProps> = ({ post }) => {
   };
 
   const handleCommentVote = async (
-    commentId: string,
-    type: "upvote" | "downvote"
+    _commentId: string,
+    _type: "upvote" | "downvote"
   ) => {
     // For now, just refetch comments to get updated vote counts
     // In the future, you might want to implement a vote mutation
-    console.log(`Voting ${type} on comment ${commentId}`);
     await refetchComments();
   };
 
   const handleAddComment = async (values: z.infer<typeof formSchema>) => {
     try {
-      const result = await createComment({
+      await createComment({
         variables: {
           input: {
             postId: post.id,
@@ -116,6 +110,7 @@ const PostWithComments: React.FC<PostWithCommentsProps> = ({ post }) => {
         },
       });
 
+      await refetchComments();
     } catch (error) {
       console.error("Error creating comment:", error);
     }
@@ -127,20 +122,20 @@ const PostWithComments: React.FC<PostWithCommentsProps> = ({ post }) => {
     author: { username: string; email: string; homepage?: string }
   ) => {
     try {
-      const result = await createReply({
-        variables: {
-          input: {
-            postId: post.id,
-            parentId: parentId,
-            content: content,
-            author: {
-              username: author.username,
-              email: author.email,
-              homepage: author.homepage,
-            },
-          },
-        },
-      });
+      // await createReply({
+      //   variables: {
+      //     input: {
+      //       postId: post.id,
+      //       parentId: parentId,
+      //       content: content,
+      //       author: {
+      //         username: author.username,
+      //         email: author.email,
+      //         homepage: author.homepage,
+      //       },
+      //     },
+      //   },
+      // });
 
       await refetchComments();
     } catch (error) {

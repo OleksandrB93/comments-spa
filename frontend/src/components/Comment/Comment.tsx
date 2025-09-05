@@ -53,16 +53,9 @@ const Comment: React.FC<CommentProps> = ({
     setShowReplyForm(false);
   };
 
-  const maxDepth = 3; // Maximum depth of nesting
-  const shouldShowReply = depth < maxDepth;
-
   return (
     <div
-      className={`${
-        depth > 0
-          ? "ml-8 border-l-2 border-gray-200 dark:border-gray-700 pl-4"
-          : ""
-      }`}
+      className={`${"ml-8 border-l-2 border-gray-200 dark:border-gray-700 pl-4"}`}
     >
       <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 mb-4">
         {/* Header */}
@@ -145,22 +138,20 @@ const Comment: React.FC<CommentProps> = ({
         </div>
 
         {/* Reply button */}
-        {shouldShowReply && (
-          <div className="flex items-center space-x-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowReplyForm(!showReplyForm)}
-              className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:text-blue-400 dark:hover:text-blue-300 dark:hover:bg-blue-900/20"
-            >
-              <Reply className="w-4 h-4 mr-1" />
-              Reply
-            </Button>
-          </div>
-        )}
+        <div className="flex items-center space-x-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowReplyForm(!showReplyForm)}
+            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:text-blue-400 dark:hover:text-blue-300 dark:hover:bg-blue-900/20"
+          >
+            <Reply className="w-4 h-4 mr-1" />
+            Reply
+          </Button>
+        </div>
 
         {/* Reply form */}
-        {showReplyForm && shouldShowReply && (
+        {showReplyForm && (
           <CommentForm
             onSubmit={handleReply}
             placeholder="Write your reply..."
