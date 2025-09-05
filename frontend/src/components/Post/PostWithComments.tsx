@@ -5,12 +5,14 @@ import Comment from "../Comment/Comment";
 import CommentForm from "../Comment/CommentForm";
 import { z } from "zod";
 import { CREATE_COMMENT, CREATE_REPLY } from "@/graphql/mutations";
-import { useMutation } from "@apollo/client/react";
+import { GET_COMMENTS } from "@/graphql/queries";
+import { useMutation, useQuery } from "@apollo/client/react";
 import type {
   CreateCommentInput,
   CreateReplyInput,
   CreateCommentResponse,
   CreateReplyResponse,
+  GetCommentsResponse,
 } from "@/graphql/types";
 
 export const formSchema = z.object({
@@ -39,13 +41,52 @@ interface PostWithCommentsProps {
 
 const PostWithComments: React.FC<PostWithCommentsProps> = ({ post }) => {
   const [currentPost, setCurrentPost] = useState<PostType>(post);
-  const [comments, setComments] = useState<CommentType[]>(post.comments || []);
 
-  // GraphQL mutations
+  // GraphQL queries and mutations
+  const {
+    data: commentsData,
+    loading: loadingComments,
+    refetch: refetchComments,
+  } = useQuery<GetCommentsResponse>(GET_COMMENTS, {
+    variables: { postId: post.id },
+    errorPolicy: "all",
+  });
+
   const [createComment, { loading: creatingComment }] =
     useMutation<CreateCommentResponse>(CREATE_COMMENT);
   const [createReply, { loading: creatingReply }] =
     useMutation<CreateReplyResponse>(CREATE_REPLY);
+
+  // Use comments from GraphQL query or fallback to post.comments
+  const comments: CommentType[] =
+    commentsData?.comments?.map((comment) => ({
+      id: comment.id,
+      content: comment.content,
+      author: {
+        id: comment.author.id,
+        username: comment.author.username,
+        email: comment.author.email,
+        homepage: comment.author.homepage,
+      },
+      createdAt: comment.createdAt,
+      votes: 0, // Default votes for now
+      replies:
+        comment.replies?.map((reply) => ({
+          id: reply.id,
+          content: reply.content,
+          author: {
+            id: reply.author.id,
+            username: reply.author.username,
+            email: reply.author.email,
+            homepage: reply.author.homepage,
+          },
+          createdAt: reply.createdAt,
+          votes: 0,
+          replies: [],
+        })) || [],
+    })) ||
+    post.comments ||
+    [];
 
   // Mock user for demonstration
   const currentUser: User = {
@@ -63,29 +104,14 @@ const PostWithComments: React.FC<PostWithCommentsProps> = ({ post }) => {
     }));
   };
 
-  const handleCommentVote = (
+  const handleCommentVote = async (
     commentId: string,
     type: "upvote" | "downvote"
   ) => {
-    const updateVotes = (comments: CommentType[]): CommentType[] => {
-      return comments.map((comment) => {
-        if (comment.id === commentId) {
-          return {
-            ...comment,
-            votes: type === "upvote" ? comment.votes + 1 : comment.votes - 1,
-          };
-        }
-        if (comment.replies) {
-          return {
-            ...comment,
-            replies: updateVotes(comment.replies),
-          };
-        }
-        return comment;
-      });
-    };
-
-    setComments(updateVotes(comments));
+    // For now, just refetch comments to get updated vote counts
+    // In the future, you might want to implement a vote mutation
+    console.log(`Voting ${type} on comment ${commentId}`);
+    await refetchComments();
   };
 
   const handleAddComment = async (values: z.infer<typeof formSchema>) => {
@@ -108,25 +134,9 @@ const PostWithComments: React.FC<PostWithCommentsProps> = ({ post }) => {
 
       console.log("Comment created successfully:", result.data);
 
-      // Update local state with the new comment
-      if (result.data?.createComment) {
-        const newComment: CommentType = {
-          id: result.data.createComment.id,
-          content: result.data.createComment.content,
-          author: {
-            id: result.data.createComment.author.id,
-            username: result.data.createComment.author.username,
-            email: result.data.createComment.author.email,
-            homepage: result.data.createComment.author.homepage,
-          },
-          createdAt: result.data.createComment.createdAt,
-          votes: 0,
-          replies: [],
-        };
-
-        setComments((prev) => [...prev, newComment]);
-        console.log("Comment added to local state successfully");
-      }
+      // Refetch comments from database to get the latest data
+      await refetchComments();
+      console.log("Comments refetched from database");
     } catch (error) {
       console.error("Error creating comment:", error);
     }
@@ -153,44 +163,9 @@ const PostWithComments: React.FC<PostWithCommentsProps> = ({ post }) => {
 
       console.log("Reply created successfully:", result.data);
 
-      // Update local state with the new reply
-      if (result.data?.createReply) {
-        const newReply: CommentType = {
-          id: result.data.createReply.id,
-          content: result.data.createReply.content,
-          author: {
-            id: result.data.createReply.author.id,
-            username: result.data.createReply.author.username,
-            email: result.data.createReply.author.email,
-            homepage: result.data.createReply.author.homepage,
-          },
-          createdAt: result.data.createReply.createdAt,
-          votes: 0,
-          replies: [],
-        };
-
-        // Add reply to the parent comment
-        const addReplyToComment = (comments: CommentType[]): CommentType[] => {
-          return comments.map((comment) => {
-            if (comment.id === parentId) {
-              return {
-                ...comment,
-                replies: [...(comment.replies || []), newReply],
-              };
-            }
-            if (comment.replies) {
-              return {
-                ...comment,
-                replies: addReplyToComment(comment.replies),
-              };
-            }
-            return comment;
-          });
-        };
-
-        setComments(addReplyToComment(comments));
-        console.log("Reply added to local state successfully");
-      }
+      // Refetch comments from database to get the latest data
+      await refetchComments();
+      console.log("Comments refetched from database after reply");
     } catch (error) {
       console.error("Error creating reply:", error);
     }
@@ -204,7 +179,7 @@ const PostWithComments: React.FC<PostWithCommentsProps> = ({ post }) => {
       {/* Comments section */}
       <div className="space-y-4">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-          Comments ({comments.length})
+          Comments ({loadingComments ? "..." : comments.length})
         </h3>
 
         {/* Add new comment form */}
@@ -212,15 +187,25 @@ const PostWithComments: React.FC<PostWithCommentsProps> = ({ post }) => {
 
         {/* Comments list */}
         <div className="space-y-4">
-          {comments.map((comment) => (
-            <Comment
-              key={comment.id}
-              comment={comment}
-              onVote={handleCommentVote}
-              onReply={handleReplyToComment}
-              isCreatingReply={creatingReply}
-            />
-          ))}
+          {loadingComments ? (
+            <div className="text-center py-4 text-gray-500 dark:text-gray-400">
+              Loading comments...
+            </div>
+          ) : comments.length === 0 ? (
+            <div className="text-center py-4 text-gray-500 dark:text-gray-400">
+              No comments yet. Be the first to comment!
+            </div>
+          ) : (
+            comments.map((comment) => (
+              <Comment
+                key={comment.id}
+                comment={comment}
+                onVote={handleCommentVote}
+                onReply={handleReplyToComment}
+                isCreatingReply={creatingReply}
+              />
+            ))
+          )}
         </div>
       </div>
     </div>

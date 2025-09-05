@@ -43,3 +43,7 @@ export interface CreateCommentResponse {
 export interface CreateReplyResponse {
   createReply: GraphQLComment;
 }
+
+export interface GetCommentsResponse {
+  comments: GraphQLComment[];
+}
