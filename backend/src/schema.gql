@@ -1,0 +1,48 @@
+# ------------------------------------------------------
+# THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
+# ------------------------------------------------------
+
+type Comment {
+  author: CommentAuthor!
+  content: String!
+  createdAt: String!
+  id: ID!
+  parentId: String
+  postId: String!
+  replies: [Comment!]
+}
+
+type CommentAuthor {
+  email: String!
+  homepage: String
+  id: ID!
+  username: String!
+}
+
+input CommentAuthorInput {
+  email: String!
+  homepage: String
+  username: String!
+}
+
+input CreateCommentInput {
+  author: CommentAuthorInput!
+  content: String!
+  postId: String!
+}
+
+input CreateReplyInput {
+  author: CommentAuthorInput!
+  content: String!
+  parentId: String!
+  postId: String!
+}
+
+type Mutation {
+  createComment(input: CreateCommentInput!): Comment!
+  createReply(input: CreateReplyInput!): Comment!
+}
+
+type Query {
+  comments(postId: String!): [Comment!]!
+}
