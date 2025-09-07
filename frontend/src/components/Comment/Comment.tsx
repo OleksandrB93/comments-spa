@@ -14,6 +14,7 @@ import CommentForm from "./CommentForm";
 import { formSchema } from "@/utils/utils";
 import { z } from "zod";
 import { readFileAsBase64, resizeImage } from "@/utils/utils";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 interface CommentProps {
   comment: CommentType;
@@ -178,11 +179,20 @@ const Comment: React.FC<CommentProps> = ({
         {comment.attachment && (
           <div className="mb-4 w-30">
             {comment.attachment.mimeType.startsWith("image/") ? (
-              <img
-                src={`data:${comment.attachment.mimeType};base64,${comment.attachment.data}`}
-                alt={comment.attachment.filename}
-                className="max-w-full h-auto rounded-lg border border-gray-200 dark:border-gray-700"
-              />
+              <Dialog>
+                <DialogTrigger>
+                  <img
+                    src={`data:${comment.attachment.mimeType};base64,${comment.attachment.data}`}
+                    alt={comment.attachment.filename}
+                    className="max-w-full h-auto rounded-lg border border-gray-200 dark:border-gray-700"
+                  />
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>{comment.attachment.filename}</DialogTitle>
+                  </DialogHeader>
+                </DialogContent>
+              </Dialog>
             ) : (
               <div className="p-4 bg-gray-100 dark:bg-gray-800 rounded-lg">
                 <a
