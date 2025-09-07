@@ -114,6 +114,78 @@
 @layer base {
 
   body {
-    @apply bg-background text-foreground pt-18;
+    @apply bg-background text-foreground;
+  }
+
+  /* Custom Modern Scrollbar Styles */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--primary) transparent;
+  }
+
+  /* Webkit browsers (Chrome, Safari, Edge) */
+  *::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  *::-webkit-scrollbar-track {
+    background: transparent;
+    border-radius: 4px;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    background: var(--primary);
+    border-radius: 4px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+    transition: all 0.2s ease-in-out;
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    background: var(--primary);
+    opacity: 0.8;
+    transform: scale(1.1);
+  }
+
+  *::-webkit-scrollbar-thumb:active {
+    background: var(--primary);
+    opacity: 0.9;
+  }
+
+  *::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+
+  /* Smooth scrolling for better UX */
+  html {
+    scroll-behavior: smooth;
+  }
+
+  /* Custom scrollbar for specific containers if needed */
+  .custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: var(--primary) var(--muted);
+  }
+
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: var(--muted);
+    border-radius: 3px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: var(--primary);
+    border-radius: 3px;
+    transition: all 0.2s ease-in-out;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: var(--primary);
+    opacity: 0.8;
   }
 }
+
