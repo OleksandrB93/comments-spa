@@ -141,7 +141,26 @@ const CommentForm: React.FC<CommentFormProps> = ({
               </FormItem>
             )}
           />
-          <div className="flex justify-end mt-3">
+
+          <FormField
+            control={form.control}
+            name="file"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Attachment (JPG, GIF, PNG, TXT)</FormLabel>
+                <FormControl>
+                  <Input
+                    type="file"
+                    accept=".jpg,.jpeg,.gif,.png,.txt"
+                    onChange={(e) => field.onChange(e.target.files)}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <div className="flex justify-end mt-3 cursor-pointer">
             <Button
               type="submit"
               disabled={

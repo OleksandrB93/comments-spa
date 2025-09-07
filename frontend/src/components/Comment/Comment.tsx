@@ -8,9 +8,12 @@ import {
   Info,
   Reply,
 } from "lucide-react";
-import type { Comment as CommentType } from "@/types";
+import type { Comment as CommentType, Attachment } from "@/types";
 import { Button } from "@/components/ui/button";
 import CommentForm from "./CommentForm";
+import { formSchema } from "@/utils/utils";
+import { z } from "zod";
+import { readFileAsBase64, resizeImage } from "@/utils/utils";
 
 interface CommentProps {
   comment: CommentType;
@@ -18,7 +21,8 @@ interface CommentProps {
   onReply: (
     parentId: string,
     content: string,
-    author: { username: string; email: string; homepage?: string }
+    author: { username: string; email: string; homepage?: string },
+    attachment?: Attachment
   ) => void;
   depth?: number;
   isCreatingReply?: boolean;
@@ -44,12 +48,40 @@ const Comment: React.FC<CommentProps> = ({
     });
   };
 
-  const handleReply = (values: any) => {
-    onReply(comment.id, values.text, {
-      username: values.username,
-      email: values.email,
-      homepage: values.homepage,
-    });
+  const handleReply = async (values: z.infer<typeof formSchema>) => {
+    let attachment;
+    if (values.file && values.file.length > 0) {
+      let file = values.file[0];
+
+      if (file.type.startsWith("image/")) {
+        try {
+          file = await resizeImage(file, 320, 240);
+        } catch (error) {
+          console.error("Error resizing image:", error);
+          return;
+        }
+      }
+
+      const base64Data = await readFileAsBase64(file);
+      attachment = {
+        data: base64Data,
+        filename: file.name,
+        mimeType: file.type,
+        originalName: file.name,
+        size: file.size,
+      };
+    }
+
+    onReply(
+      comment.id,
+      values.text,
+      {
+        username: values.username,
+        email: values.email,
+        homepage: values.homepage,
+      },
+      attachment
+    );
     setShowReplyForm(false);
   };
 
@@ -68,15 +100,7 @@ const Comment: React.FC<CommentProps> = ({
             {/* Avatar */}
             <div className="relative">
               <div className="w-10 h-10 bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white text-sm font-bold shadow-lg ring-2 ring-white dark:ring-gray-800">
-                {comment.author.avatar ? (
-                  <img
-                    src={comment.author.avatar}
-                    alt={comment.author.username}
-                    className="w-full h-full rounded-full object-cover"
-                  />
-                ) : (
-                  comment.author.username.charAt(0).toUpperCase()
-                )}
+                {comment.author.username.charAt(0).toUpperCase()}
               </div>
               <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white dark:border-gray-900"></div>
             </div>
@@ -150,8 +174,31 @@ const Comment: React.FC<CommentProps> = ({
           ))}
         </div>
 
+        {/* Attachment */}
+        {comment.attachment && (
+          <div className="mb-4 w-30">
+            {comment.attachment.mimeType.startsWith("image/") ? (
+              <img
+                src={`data:${comment.attachment.mimeType};base64,${comment.attachment.data}`}
+                alt={comment.attachment.filename}
+                className="max-w-full h-auto rounded-lg border border-gray-200 dark:border-gray-700"
+              />
+            ) : (
+              <div className="p-4 bg-gray-100 dark:bg-gray-800 rounded-lg">
+                <a
+                  href={`data:${comment.attachment.mimeType};base64,${comment.attachment.data}`}
+                  download={comment.attachment.filename}
+                  className="text-primary hover:underline"
+                >
+                  Download {comment.attachment.filename}
+                </a>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Reply button */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between cursor-pointer">
           <Button
             variant="ghost"
             size="sm"
@@ -159,13 +206,13 @@ const Comment: React.FC<CommentProps> = ({
             className="group/reply relative inline-flex items-center px-6 py-3 text-sm font-semibold text-white bg-gradient-to-r from-primary via-primary/80 to-primary/60 hover:from-primary hover:via-primary/90 hover:to-primary/70 rounded-xl transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-primary/25 dark:shadow-primary/25 overflow-hidden"
           >
             {/* Animated background gradient */}
-            <div className="absolute inset-0 bg-gradient-to-r from-primary/80 via-primary/60 to-primary/40 opacity-0 group-hover/reply:opacity-100 transition-opacity duration-300"></div>
+            <div className="absolute inset-0 bg-gradient-to-r from-primary/80 via-primary/60 to-primary/40 opacity-0 group-hover/reply:opacity-100 transition-opacity duration-300 cursor-pointer"></div>
 
             {/* Shimmer effect */}
             <div className="absolute inset-0 -top-1 -left-1 bg-gradient-to-r from-transparent via-white/20 to-transparent skew-x-12 -translate-x-full group-hover/reply:translate-x-full transition-transform duration-700"></div>
 
             {/* Content */}
-            <div className="relative flex items-center">
+            <div className="relative flex items-center cursor-pointer">
               <Reply className="w-4 h-4 mr-2 group-hover/reply:rotate-12 transition-transform duration-300" />
               <span className="relative z-10">Reply</span>
               {showReplyForm && (
@@ -189,7 +236,7 @@ const Comment: React.FC<CommentProps> = ({
 
         {/* Reply form */}
         {showReplyForm && (
-          <div className="mt-6 p-6 bg-gradient-to-br from-primary/10 via-primary/5 to-primary/5 dark:from-primary/20 dark:via-primary/10 dark:to-primary/10 rounded-xl border border-primary/30 dark:border-primary/30 shadow-sm backdrop-blur-sm">
+          <div className="mt-6 p-6 bg-gradient-to-br from-primary/10 via-primary/5 to-primary/5 dark:from-primary/20 dark:via-primary/10 dark:to-primary/10 rounded-xl border border-primary/30 dark:border-primary/30 shadow-sm backdrop-blur-sm cursor-pointer">
             <div className="flex items-center mb-4">
               <div className="w-2 h-2 bg-gradient-to-r from-primary to-primary/80 rounded-full mr-2 animate-pulse"></div>
               <span className="text-sm font-medium text-gray-700 dark:text-gray-300">

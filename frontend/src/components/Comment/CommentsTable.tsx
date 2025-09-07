@@ -1,16 +1,17 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   ChevronUp,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
-// import type { Comment as CommentType } from "@/types"; // Not used anymore
 import Comment from "./Comment";
 import { Button } from "@/components/ui/button";
 import { GET_COMMENTS_PAGINATED } from "@/graphql/queries";
 import { useQuery } from "@apollo/client/react";
 import type { CommentsPaginatedResponse } from "@/graphql/types";
+import type { Attachment } from "@/types";
+import { buildCommentHierarchy } from "@/utils/utils";
 
 interface CommentsTableProps {
   postId: string;
@@ -18,7 +19,8 @@ interface CommentsTableProps {
   onReply: (
     parentId: string,
     content: string,
-    author: { username: string; email: string; homepage?: string }
+    author: { username: string; email: string; homepage?: string },
+    attachment?: Attachment
   ) => void;
   isCreatingReply?: boolean;
 }
@@ -50,9 +52,15 @@ const CommentsTable: React.FC<CommentsTableProps> = ({
     }
   );
 
-  const comments = paginatedData?.commentsPaginated?.comments || [];
+  const allComments = paginatedData?.commentsPaginated?.allComments || [];
   const totalCount = paginatedData?.commentsPaginated?.totalCount || 0;
   const totalPages = paginatedData?.commentsPaginated?.totalPages || 0;
+
+  // Build hierarchy from flat list for unlimited nesting
+  const hierarchicalComments = useMemo(() => {
+    if (allComments.length === 0) return [];
+    return buildCommentHierarchy(allComments);
+  }, [allComments]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -65,8 +73,8 @@ const CommentsTable: React.FC<CommentsTableProps> = ({
     }
   };
 
-  // Sort comments (backend already provides paginated data)
-  const sortedComments = [...comments].sort((a, b) => {
+  // Sort hierarchical comments (only top-level for pagination display)
+  const sortedComments = [...hierarchicalComments].sort((a, b) => {
     let aValue: string | number;
     let bValue: string | number;
 

@@ -12,6 +12,7 @@ export const CREATE_COMMENT = gql`
         homepage
       }
       attachment {
+        data
         filename
         mimeType
       }
@@ -32,6 +33,7 @@ export const CREATE_REPLY = gql`
         homepage
       }
       attachment {
+        data
         filename
         mimeType
       }

@@ -65,6 +65,9 @@ export class CommentsResponse {
   @Field(() => [Comment])
   comments: Comment[];
 
+  @Field(() => [Comment], { nullable: true })
+  allComments?: Comment[];
+
   @Field(() => Int)
   totalCount: number;
 

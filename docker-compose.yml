@@ -83,6 +83,7 @@ services:
       - ./backend:/app
       - /app/node_modules
       - ./uploads:/app/uploads
+    command: npm run start:dev
     depends_on:
       - mongodb
       - redis

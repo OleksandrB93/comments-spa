@@ -18,12 +18,27 @@ export interface Post {
 export interface Comment {
   id: string;
   content: string;
-  author: User;
+  author: {
+    userId: string;
+    username: string;
+    email: string;
+    homepage?: string;
+  };
   createdAt: string;
-  votes: number;
-  parentId?: string; // for nested comments
+  votes?: number;
+  parentId?: string;
+  postId: string;
   replies?: Comment[];
-  quotedContent?: string; // for quoting the parent comment
+  quotedContent?: string;
+  attachment?: Attachment;
+}
+
+export interface Attachment {
+  data: string;
+  filename: string;
+  mimeType: string;
+  originalName: string;
+  size: number;
 }
 
 export interface VoteAction {

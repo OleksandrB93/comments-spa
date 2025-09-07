@@ -6,7 +6,7 @@ export const GET_COMMENTS = gql`
       id
       content
       author {
-        id
+        userId
         username
         email
         homepage
@@ -20,24 +20,7 @@ export const GET_COMMENTS = gql`
       }
       createdAt
       parentId
-      replies {
-        id
-        content
-        author {
-          id
-          username
-          email
-          homepage
-        }
-        attachment {
-          data
-          filename
-          mimeType
-          originalName
-          size
-        }
-        createdAt
-      }
+      postId
     }
   }
 `;
@@ -49,7 +32,7 @@ export const GET_COMMENTS_PAGINATED = gql`
         id
         content
         author {
-          id
+          userId
           username
           email
           homepage
@@ -63,24 +46,27 @@ export const GET_COMMENTS_PAGINATED = gql`
         }
         createdAt
         parentId
-        replies {
-          id
-          content
-          author {
-            id
-            username
-            email
-            homepage
-          }
-          attachment {
-            data
-            filename
-            mimeType
-            originalName
-            size
-          }
-          createdAt
+        postId
+      }
+      allComments {
+        id
+        content
+        author {
+          userId
+          username
+          email
+          homepage
         }
+        attachment {
+          data
+          filename
+          mimeType
+          originalName
+          size
+        }
+        createdAt
+        parentId
+        postId
       }
       totalCount
       page

@@ -34,7 +34,7 @@ export interface CommentAttachment {
 }
 
 export interface CommentAuthor {
-  id: string;
+  userId: string;
   username: string;
   email: string;
   homepage?: string;
@@ -66,6 +66,7 @@ export interface GetCommentsResponse {
 export interface CommentsPaginatedResponse {
   commentsPaginated: {
     comments: GraphQLComment[];
+    allComments?: GraphQLComment[];
     totalCount: number;
     page: number;
     limit: number;

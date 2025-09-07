@@ -21,7 +21,7 @@ export class CommentService {
       attachment,
     });
     const savedComment = await newComment.save();
-    return this.mapToGraphQLComment(savedComment);
+    return await this.mapToGraphQLComment(savedComment);
   }
 
   async createReply(input: CreateReplyInput): Promise<GraphQLComment> {
@@ -45,39 +45,19 @@ export class CommentService {
 
     const savedReply = await newReply.save();
 
-    return this.mapToGraphQLComment(savedReply);
+    return await this.mapToGraphQLComment(savedReply);
   }
 
   async getComments(postId: string): Promise<GraphQLComment[]> {
-    // Get only top-level comments (no parentId or parentId is null)
-    const comments = await this.commentModel
-      .find({
-        postId,
-        $or: [{ parentId: null }, { parentId: { $exists: false } }],
-      })
+    // Return flat list of all comments for this post
+    const allComments = await this.commentModel
+      .find({ postId })
       .sort({ createdAt: -1 })
       .exec();
 
-    // For each comment, get its replies
-    const commentsWithReplies = await Promise.all(
-      comments.map(async (comment) => {
-        const replies = await this.commentModel
-          .find({ parentId: comment._id })
-          .sort({ createdAt: 1 })
-          .exec();
-
-        return {
-          ...comment.toObject(),
-          replies: replies,
-        };
-      }),
+    return await Promise.all(
+      allComments.map((comment) => this.mapToGraphQLComment(comment, false)),
     );
-
-    const result = commentsWithReplies.map((comment) =>
-      this.mapToGraphQLComment(comment),
-    );
-
-    return result;
   }
 
   async getCommentsPaginated(
@@ -95,8 +75,8 @@ export class CommentService {
       })
       .exec();
 
-    // Get paginated top-level comments
-    const comments = await this.commentModel
+    // Get top-level comments for pagination
+    const topLevelComments = await this.commentModel
       .find({
         postId,
         $or: [{ parentId: null }, { parentId: { $exists: false } }],
@@ -106,29 +86,27 @@ export class CommentService {
       .limit(limit)
       .exec();
 
-    // For each comment, get its replies
-    const commentsWithReplies = await Promise.all(
-      comments.map(async (comment) => {
-        const replies = await this.commentModel
-          .find({ parentId: comment._id })
-          .sort({ createdAt: 1 })
-          .exec();
+    // Get ALL comments for this post (flat list)
+    const allComments = await this.commentModel
+      .find({ postId })
+      .sort({ createdAt: -1 })
+      .exec();
 
-        return {
-          ...comment.toObject(),
-          replies: replies,
-        };
-      }),
+    const mappedTopComments = await Promise.all(
+      topLevelComments.map((comment) =>
+        this.mapToGraphQLComment(comment, false),
+      ),
     );
 
-    const mappedComments = commentsWithReplies.map((comment) =>
-      this.mapToGraphQLComment(comment),
+    const allMappedComments = await Promise.all(
+      allComments.map((comment) => this.mapToGraphQLComment(comment, false)),
     );
 
     const totalPages = Math.ceil(totalCount / limit);
 
     return {
-      comments: mappedComments,
+      comments: mappedTopComments,
+      allComments: allMappedComments, // Flat list for frontend hierarchy building
       totalCount,
       page,
       limit,
@@ -139,7 +117,7 @@ export class CommentService {
   async getCommentById(id: string): Promise<GraphQLComment | null> {
     const comment = await this.commentModel.findById(id).exec();
 
-    return comment ? this.mapToGraphQLComment(comment) : null;
+    return comment ? await this.mapToGraphQLComment(comment, true) : null;
   }
 
   async getAllComments(): Promise<GraphQLComment[]> {
@@ -148,25 +126,58 @@ export class CommentService {
       .sort({ createdAt: -1 })
       .exec();
 
-    return comments.map((comment) => this.mapToGraphQLComment(comment));
+    return await Promise.all(
+      comments.map((comment) => this.mapToGraphQLComment(comment, true)),
+    );
   }
 
-  private mapToGraphQLComment(comment: any): GraphQLComment {
+  private async mapToGraphQLComment(
+    comment: any,
+    includeReplies: boolean = false,
+  ): Promise<GraphQLComment> {
+    let mappedReplies: GraphQLComment[] = [];
+
+    if (includeReplies && comment.replies) {
+      // For pre-built hierarchy (from getCommentsPaginated)
+      mappedReplies = await Promise.all(
+        comment.replies.map((reply: any) =>
+          this.mapToGraphQLComment(reply, true),
+        ),
+      );
+    } else if (includeReplies) {
+      // For single comments that need replies fetched
+      const replies = await this.commentModel
+        .find({ parentId: comment._id.toString() })
+        .sort({ createdAt: 1 })
+        .exec();
+
+      mappedReplies = await Promise.all(
+        replies.map((reply) => this.mapToGraphQLComment(reply, true)),
+      );
+    }
+
     return {
       id: comment._id.toString(),
       content: comment.content,
       author: {
-        id: comment.author.userId, // Use author ID if available, fallback to comment ID
+        userId: comment.author.userId,
         username: comment.author.username,
         email: comment.author.email,
         homepage: comment.author.homepage,
       },
+      attachment: comment.attachment
+        ? {
+            data: comment.attachment.data,
+            filename: comment.attachment.filename,
+            mimeType: comment.attachment.mimeType,
+            originalName: comment.attachment.originalName,
+            size: comment.attachment.size,
+          }
+        : undefined,
       createdAt: comment.createdAt.toISOString(),
       parentId: comment.parentId?.toString(),
       postId: comment.postId,
-      replies:
-        comment.replies?.map((reply: any) => this.mapToGraphQLComment(reply)) ||
-        [],
+      replies: mappedReplies,
     };
   }
 }

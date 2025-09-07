@@ -11,6 +11,8 @@ import type {
   CreateReplyResponse,
 } from "@/graphql/types";
 import type { formSchema } from "@/utils/utils";
+import { readFileAsBase64, resizeImage } from "@/utils/utils";
+import type { Attachment } from "@/types";
 
 interface PostWithCommentsProps {
   post: PostType;
@@ -48,6 +50,30 @@ const PostWithComments: React.FC<PostWithCommentsProps> = ({ post }) => {
 
   const handleAddComment = async (values: z.infer<typeof formSchema>) => {
     try {
+      let attachment;
+      if (values.file && values.file.length > 0) {
+        let file = values.file[0];
+
+        // Resize image if it's an image and exceeds dimensions
+        if (file.type.startsWith("image/")) {
+          try {
+            file = await resizeImage(file, 320, 240);
+          } catch (error) {
+            console.error("Error resizing image:", error);
+            // Optionally, show an error to the user
+            return;
+          }
+        }
+
+        const base64Data = await readFileAsBase64(file);
+        attachment = {
+          data: base64Data,
+          filename: file.name,
+          mimeType: file.type,
+          originalName: file.name,
+          size: file.size,
+        };
+      }
       await createComment({
         variables: {
           input: {
@@ -57,6 +83,7 @@ const PostWithComments: React.FC<PostWithCommentsProps> = ({ post }) => {
             username: values.username,
             email: values.email,
             homepage: values.homepage || undefined,
+            attachment,
           },
         },
       });
@@ -71,7 +98,8 @@ const PostWithComments: React.FC<PostWithCommentsProps> = ({ post }) => {
   const handleReplyToComment = async (
     parentId: string,
     content: string,
-    author: { username: string; email: string; homepage?: string }
+    author: { username: string; email: string; homepage?: string },
+    attachment?: Attachment
   ) => {
     try {
       await createReply({
@@ -84,6 +112,7 @@ const PostWithComments: React.FC<PostWithCommentsProps> = ({ post }) => {
             username: author.username,
             email: author.email,
             homepage: author.homepage,
+            attachment,
           },
         },
       });
