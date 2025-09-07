@@ -1,12 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import {
-  CreateCommentInput,
-  CreateReplyInput,
-  Comment as GraphQLComment,
-  CommentsResponse,
-} from './comment.entity';
+import { CreateCommentInput, CreateReplyInput } from './comment.input';
+import { Comment as GraphQLComment, CommentsResponse } from './comment.model';
 import { Comment, CommentDocument } from './schemas/comment.schema';
 
 @Injectable()
@@ -16,31 +12,35 @@ export class CommentService {
   ) {}
 
   async createComment(input: CreateCommentInput): Promise<GraphQLComment> {
+    const { postId, content, userId, username, email, homepage, attachment } =
+      input;
     const newComment = new this.commentModel({
-      content: input.content,
-      author: {
-        username: input.author.username,
-        email: input.author.email,
-        homepage: input.author.homepage,
-      },
-      postId: input.postId,
+      postId,
+      content,
+      author: { userId, username, email, homepage },
+      attachment,
     });
-
     const savedComment = await newComment.save();
-
     return this.mapToGraphQLComment(savedComment);
   }
 
   async createReply(input: CreateReplyInput): Promise<GraphQLComment> {
+    const {
+      postId,
+      parentId,
+      content,
+      userId,
+      username,
+      email,
+      homepage,
+      attachment,
+    } = input;
     const newReply = new this.commentModel({
-      content: input.content,
-      author: {
-        username: input.author.username,
-        email: input.author.email,
-        homepage: input.author.homepage,
-      },
-      postId: input.postId,
-      parentId: new Types.ObjectId(input.parentId),
+      postId,
+      parentId,
+      content,
+      author: { userId, username, email, homepage },
+      attachment,
     });
 
     const savedReply = await newReply.save();
@@ -156,7 +156,7 @@ export class CommentService {
       id: comment._id.toString(),
       content: comment.content,
       author: {
-        id: comment.author._id?.toString() || comment._id.toString(), // Use author ID if available, fallback to comment ID
+        id: comment.author.userId, // Use author ID if available, fallback to comment ID
         username: comment.author.username,
         email: comment.author.email,
         homepage: comment.author.homepage,

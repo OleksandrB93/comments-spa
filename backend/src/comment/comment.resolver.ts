@@ -1,11 +1,8 @@
 import { Resolver, Mutation, Query, Args, Int } from '@nestjs/graphql';
+import { ValidationPipe } from '@nestjs/common';
 import { CommentService } from './comment.service';
-import {
-  CreateCommentInput,
-  CreateReplyInput,
-  Comment,
-  CommentsResponse,
-} from './comment.entity';
+import { CreateCommentInput, CreateReplyInput } from './comment.input';
+import { Comment, CommentsResponse } from './comment.model';
 
 @Resolver(() => Comment)
 export class CommentResolver {

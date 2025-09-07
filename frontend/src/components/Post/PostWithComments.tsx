@@ -53,11 +53,10 @@ const PostWithComments: React.FC<PostWithCommentsProps> = ({ post }) => {
           input: {
             postId: post.id,
             content: values.text,
-            author: {
-              username: values.username,
-              email: values.email,
-              homepage: values.homepage || undefined,
-            },
+            userId: "123", // TODO: replace with dynamic user id
+            username: values.username,
+            email: values.email,
+            homepage: values.homepage || undefined,
           },
         },
       });
@@ -81,11 +80,10 @@ const PostWithComments: React.FC<PostWithCommentsProps> = ({ post }) => {
             postId: post.id,
             parentId: parentId,
             content: content,
-            author: {
-              username: author.username,
-              email: author.email,
-              homepage: author.homepage,
-            },
+            userId: "123", // TODO: replace with dynamic user id
+            username: author.username,
+            email: author.email,
+            homepage: author.homepage,
           },
         },
       });

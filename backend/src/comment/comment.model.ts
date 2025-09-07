@@ -1,21 +1,27 @@
-import { ObjectType, Field, ID, InputType, Int } from '@nestjs/graphql';
+import { ObjectType, Field, ID, Int } from '@nestjs/graphql';
 
-@InputType()
-export class CommentAuthorInput {
+@ObjectType()
+export class CommentAttachment {
   @Field()
-  username: string;
+  data: string;
 
   @Field()
-  email: string;
+  filename: string;
 
-  @Field({ nullable: true })
-  homepage?: string;
+  @Field()
+  mimeType: string;
+
+  @Field()
+  originalName: string;
+
+  @Field(() => Int)
+  size: number;
 }
 
 @ObjectType()
 export class CommentAuthor {
   @Field(() => ID)
-  id: string;
+  userId: string;
 
   @Field()
   username: string;
@@ -38,6 +44,9 @@ export class Comment {
   @Field(() => CommentAuthor)
   author: CommentAuthor;
 
+  @Field(() => CommentAttachment, { nullable: true })
+  attachment?: CommentAttachment;
+
   @Field()
   createdAt: string;
 
@@ -49,33 +58,6 @@ export class Comment {
 
   @Field(() => [Comment], { nullable: true })
   replies?: Comment[];
-}
-
-@InputType()
-export class CreateCommentInput {
-  @Field()
-  postId: string;
-
-  @Field()
-  content: string;
-
-  @Field(() => CommentAuthorInput)
-  author: CommentAuthorInput;
-}
-
-@InputType()
-export class CreateReplyInput {
-  @Field()
-  postId: string;
-
-  @Field()
-  parentId: string;
-
-  @Field()
-  content: string;
-
-  @Field(() => CommentAuthorInput)
-  author: CommentAuthorInput;
 }
 
 @ObjectType()

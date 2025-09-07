@@ -10,6 +10,7 @@ export class Comment {
 
   @Prop({
     type: {
+      userId: { type: String, required: true },
       username: { type: String, required: true },
       email: { type: String, required: true },
       homepage: { type: String, required: false },
@@ -17,9 +18,28 @@ export class Comment {
     required: true,
   })
   author: {
+    userId: string;
     username: string;
     email: string;
     homepage?: string;
+  };
+
+  @Prop({
+    type: {
+      data: { type: String, required: false },
+      filename: { type: String, required: false },
+      mimeType: { type: String, required: false },
+      originalName: { type: String, required: false },
+      size: { type: Number, required: false },
+    },
+    required: false,
+  })
+  attachment?: {
+    data: string;
+    filename: string;
+    mimeType: string;
+    originalName: string;
+    size: number;
   };
 
   @Prop({ required: true })

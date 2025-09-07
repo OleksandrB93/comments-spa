@@ -3,6 +3,7 @@
 # ------------------------------------------------------
 
 type Comment {
+  attachment: CommentAttachment
   author: CommentAuthor!
   content: String!
   createdAt: String!
@@ -12,16 +13,26 @@ type Comment {
   replies: [Comment!]
 }
 
+type CommentAttachment {
+  data: String!
+  filename: String!
+  mimeType: String!
+  originalName: String!
+  size: Int!
+}
+
+input CommentAttachmentInput {
+  data: String!
+  filename: String!
+  mimeType: String!
+  originalName: String!
+  size: Int!
+}
+
 type CommentAuthor {
   email: String!
   homepage: String
   id: ID!
-  username: String!
-}
-
-input CommentAuthorInput {
-  email: String!
-  homepage: String
   username: String!
 }
 
@@ -34,16 +45,22 @@ type CommentsResponse {
 }
 
 input CreateCommentInput {
-  author: CommentAuthorInput!
+  attachment: CommentAttachmentInput
   content: String!
+  email: String!
+  homepage: String
   postId: String!
+  username: String!
 }
 
 input CreateReplyInput {
-  author: CommentAuthorInput!
+  attachment: CommentAttachmentInput
   content: String!
+  email: String!
+  homepage: String
   parentId: String!
   postId: String!
+  username: String!
 }
 
 type Mutation {

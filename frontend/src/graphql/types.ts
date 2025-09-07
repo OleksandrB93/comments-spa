@@ -1,22 +1,36 @@
-export interface CreateCommentInput {
-  postId: string;
-  content: string;
-  author: {
-    username: string;
-    email: string;
-    homepage?: string;
-  };
+export interface CommentAttachmentInput {
+  data: string;
+  filename: string;
+  mimeType: string;
+  originalName: string;
+  size: number;
 }
 
-export interface CreateReplyInput {
+export type CreateCommentInput = {
+  postId: string;
+  content: string;
+  username: string;
+  email: string;
+  homepage?: string;
+  attachment?: CommentAttachmentInput;
+};
+
+export type CreateReplyInput = {
   postId: string;
   parentId: string;
   content: string;
-  author: {
-    username: string;
-    email: string;
-    homepage?: string;
-  };
+  username: string;
+  email: string;
+  homepage?: string;
+  attachment?: CommentAttachmentInput;
+};
+
+export interface CommentAttachment {
+  data: string;
+  filename: string;
+  mimeType: string;
+  originalName: string;
+  size: number;
 }
 
 export interface CommentAuthor {
@@ -30,6 +44,7 @@ export interface GraphQLComment {
   id: string;
   content: string;
   author: CommentAuthor;
+  attachment?: CommentAttachment;
   createdAt: string;
   parentId?: string;
   postId: string;

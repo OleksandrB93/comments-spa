@@ -11,6 +11,13 @@ export const GET_COMMENTS = gql`
         email
         homepage
       }
+      attachment {
+        data
+        filename
+        mimeType
+        originalName
+        size
+      }
       createdAt
       parentId
       replies {
@@ -21,6 +28,13 @@ export const GET_COMMENTS = gql`
           username
           email
           homepage
+        }
+        attachment {
+          data
+          filename
+          mimeType
+          originalName
+          size
         }
         createdAt
       }
@@ -40,6 +54,13 @@ export const GET_COMMENTS_PAGINATED = gql`
           email
           homepage
         }
+        attachment {
+          data
+          filename
+          mimeType
+          originalName
+          size
+        }
         createdAt
         parentId
         replies {
@@ -50,6 +71,13 @@ export const GET_COMMENTS_PAGINATED = gql`
             username
             email
             homepage
+          }
+          attachment {
+            data
+            filename
+            mimeType
+            originalName
+            size
           }
           createdAt
         }

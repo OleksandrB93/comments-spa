@@ -6,14 +6,16 @@ export const CREATE_COMMENT = gql`
       id
       content
       author {
-        id
+        userId
         username
         email
         homepage
       }
+      attachment {
+        filename
+        mimeType
+      }
       createdAt
-      parentId
-      postId
     }
   }
 `;
@@ -24,10 +26,14 @@ export const CREATE_REPLY = gql`
       id
       content
       author {
-        id
+        userId
         username
         email
         homepage
+      }
+      attachment {
+        filename
+        mimeType
       }
       createdAt
       parentId

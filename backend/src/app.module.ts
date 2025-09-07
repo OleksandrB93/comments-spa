@@ -1,4 +1,6 @@
 import { Module } from '@nestjs/common';
+import { APP_PIPE } from '@nestjs/core';
+import { ValidationPipe } from '@nestjs/common';
 import { GraphQLModule } from '@nestjs/graphql';
 import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
 import { MongooseModule } from '@nestjs/mongoose';
@@ -19,10 +21,37 @@ import { CommentModule } from './comment/comment.module';
       sortSchema: true,
       playground: true,
       introspection: true,
+      validationRules: [],
+      plugins: [],
+      context: ({ req }) => ({ req }),
+      formatError: (error) => {
+        console.log('GraphQL Error:', JSON.stringify(error, null, 2));
+        return {
+          message:
+            error.extensions?.['originalError']?.['message']?.join(', ') ??
+            error.message,
+          path: error.path,
+          locations: error.locations,
+          extensions: {
+            code: error.extensions?.['code'],
+          },
+        };
+      },
     }),
     CommentModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    // Disable global ValidationPipe - use custom pipe in resolver
+    // {
+    //   provide: APP_PIPE,
+    //   useValue: new ValidationPipe({
+    //     transform: true,
+    //     whitelist: true,
+    //     forbidNonWhitelisted: true,
+    //   }),
+    // },
+  ],
 })
 export class AppModule {}
