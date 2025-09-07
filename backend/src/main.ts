@@ -1,9 +1,33 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
+import helmet from 'helmet';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  // Security headers with Helmet
+  app.use(
+    helmet({
+      crossOriginEmbedderPolicy: false,
+      contentSecurityPolicy: {
+        useDefaults: true,
+        directives: {
+          imgSrc: [
+            `'self'`,
+            'data:',
+            'apollo-server-landing-page.cdn.apollographql.com',
+          ],
+          scriptSrc: [`'self'`, `'unsafe-inline'`, 'https:'],
+          manifestSrc: [
+            `'self'`,
+            'apollo-server-landing-page.cdn.apollographql.com',
+          ],
+          frameSrc: [`'self'`, 'sandbox.embed.apollographql.com'],
+        },
+      },
+    }),
+  );
 
   // Enable CORS for frontend
   app.enableCors({
@@ -11,12 +35,11 @@ async function bootstrap() {
     credentials: true,
   });
 
-  // Disable validation pipe completely for testing
   // app.useGlobalPipes(
   //   new ValidationPipe({
   //     whitelist: true,
   //     forbidNonWhitelisted: true,
-  //     transform: true, // important for nested DTOs
+  //     transform: true,
   //   }),
   // );
 
