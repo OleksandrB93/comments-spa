@@ -3,10 +3,14 @@ import { ValidationPipe } from '@nestjs/common';
 import { CommentService } from './comment.service';
 import { CreateCommentInput, CreateReplyInput } from './comment.input';
 import { Comment, CommentsResponse } from './comment.model';
+import { RabbitMQTestService } from './rabbitmq-test.service';
 
 @Resolver(() => Comment)
 export class CommentResolver {
-  constructor(private readonly commentService: CommentService) {}
+  constructor(
+    private readonly commentService: CommentService,
+    private readonly rabbitMQTestService: RabbitMQTestService,
+  ) {}
 
   @Mutation(() => Comment)
   async createComment(
@@ -33,5 +37,15 @@ export class CommentResolver {
     @Args('limit', { type: () => Int, defaultValue: 25 }) limit: number,
   ): Promise<CommentsResponse> {
     return this.commentService.getCommentsPaginated(postId, page, limit);
+  }
+
+  @Mutation(() => String)
+  async testRabbitMQ(): Promise<string> {
+    try {
+      await this.rabbitMQTestService.runAllTests();
+      return 'RabbitMQ tests completed successfully! Check server logs for details.';
+    } catch (error) {
+      return `RabbitMQ tests failed: ${error.message}`;
+    }
   }
 }

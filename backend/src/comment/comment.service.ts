@@ -5,12 +5,14 @@ import { CreateCommentInput, CreateReplyInput } from './comment.input';
 import { Comment as GraphQLComment, CommentsResponse } from './comment.model';
 import { Comment, CommentDocument } from './schemas/comment.schema';
 import { CommentGateway } from './comment.gateway';
+import { RabbitMQService } from './rabbitmq.service';
 
 @Injectable()
 export class CommentService {
   constructor(
     @InjectModel(Comment.name) private commentModel: Model<CommentDocument>,
     private commentGateway: CommentGateway,
+    private rabbitMQService: RabbitMQService,
   ) {}
 
   async createComment(input: CreateCommentInput): Promise<GraphQLComment> {
@@ -25,7 +27,17 @@ export class CommentService {
     const savedComment = await newComment.save();
     const graphQLComment = await this.mapToGraphQLComment(savedComment);
 
-    // Відправляємо новий коментар через WebSocket
+    // Send message to RabbitMQ for asynchronous processing
+    await this.rabbitMQService.publish('comment.created', {
+      commentId: savedComment._id.toString(),
+      postId,
+      content,
+      author: { userId, username, email, homepage },
+      attachment,
+      parentId: null,
+    });
+
+    // Send new comment through WebSocket (synchronously for speed)
     this.commentGateway.broadcastNewComment(postId, graphQLComment);
 
     return graphQLComment;
@@ -53,7 +65,17 @@ export class CommentService {
     const savedReply = await newReply.save();
     const graphQLReply = await this.mapToGraphQLComment(savedReply);
 
-    // Відправляємо новий відповідь через WebSocket
+    // Send message to RabbitMQ for asynchronous processing
+    await this.rabbitMQService.publish('comment.created', {
+      commentId: savedReply._id.toString(),
+      postId,
+      content,
+      author: { userId, username, email, homepage },
+      attachment,
+      parentId,
+    });
+
+    // Send new reply through WebSocket (synchronously for speed)
     this.commentGateway.broadcastNewComment(postId, graphQLReply);
 
     return graphQLReply;

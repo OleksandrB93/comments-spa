@@ -4,6 +4,7 @@ import { ValidationPipe } from '@nestjs/common';
 import { GraphQLModule } from '@nestjs/graphql';
 import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
 import { MongooseModule } from '@nestjs/mongoose';
+import { ConfigModule } from '@nestjs/config';
 import { join } from 'path';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -11,6 +12,10 @@ import { CommentModule } from './comment/comment.module';
 
 @Module({
   imports: [
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: '.env',
+    }),
     MongooseModule.forRoot(
       process.env.MONGODB_URI ||
         'mongodb://admin:password123@localhost:27017/comments_db?authSource=admin',

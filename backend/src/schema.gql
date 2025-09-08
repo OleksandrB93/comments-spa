@@ -69,6 +69,7 @@ input CreateReplyInput {
 type Mutation {
   createComment(input: CreateCommentInput!): Comment!
   createReply(input: CreateReplyInput!): Comment!
+  testRabbitMQ: String!
 }
 
 type Query {
