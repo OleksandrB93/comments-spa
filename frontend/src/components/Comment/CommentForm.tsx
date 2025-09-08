@@ -13,19 +13,32 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import Captcha, { type CaptchaRef } from "./Capcha";
-import { Textarea } from "../ui/textarea";
 import { formSchema } from "@/utils/utils";
+import {
+  BoldItalicUnderlineToggles,
+  CreateLink,
+  MDXEditor,
+  toolbarPlugin,
+  headingsPlugin,
+  listsPlugin,
+  quotePlugin,
+  thematicBreakPlugin,
+  linkPlugin,
+  linkDialogPlugin,
+  InsertThematicBreak,
+  UndoRedo,
+} from "@mdxeditor/editor";
+
+import "@mdxeditor/editor/style.css";
 
 interface CommentFormProps {
   onSubmit: (values: z.infer<typeof formSchema>) => void;
-  placeholder?: string;
   buttonText?: string;
   isLoading?: boolean;
 }
 
 const CommentForm: React.FC<CommentFormProps> = ({
   onSubmit,
-  placeholder = "Write your comment...",
   buttonText = "Add comment",
   isLoading = false,
 }) => {
@@ -131,17 +144,36 @@ const CommentForm: React.FC<CommentFormProps> = ({
               <FormItem>
                 <FormLabel>Text</FormLabel>
                 <FormControl>
-                  <Textarea
-                    placeholder={placeholder}
-                    className="resize-none"
-                    {...field}
+                  <MDXEditor
+                    className="prose max-w-none border rounded-md p-2 min-h-[200px] text-white bg-gray-800"
+                    markdown={field.value}
+                    onChange={field.onChange}
+                    plugins={[
+                      headingsPlugin(),
+                      listsPlugin(),
+                      quotePlugin(),
+                      thematicBreakPlugin(),
+                      linkPlugin(),
+                      linkDialogPlugin(),
+                      toolbarPlugin({
+                        toolbarContents: () => (
+                          <div className="text-white p-1 rounded flex gap-1 flex-wrap">
+                            <UndoRedo />
+                            {/* <BlockTypeSelect /> */}
+                            <BoldItalicUnderlineToggles />
+                            {/* <ListsToggle /> */}
+                            <CreateLink />
+                            <InsertThematicBreak />
+                          </div>
+                        ),
+                      }),
+                    ]}
                   />
                 </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
-
           <FormField
             control={form.control}
             name="file"

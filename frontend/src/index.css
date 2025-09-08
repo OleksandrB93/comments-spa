@@ -189,3 +189,10 @@
   }
 }
 
+[aria-label="editable markdown"] {
+  color: var(--foreground) !important;
+}
+
+[role="toolbar"] {
+  background-color: var(--color-gray-700) !important;
+}

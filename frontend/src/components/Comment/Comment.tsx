@@ -14,13 +14,10 @@ import CommentForm from "./CommentForm";
 import { formSchema } from "@/utils/utils";
 import { z } from "zod";
 import { readFileAsBase64, resizeImage } from "@/utils/utils";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import rehypeRaw from "rehype-raw";
 
 interface CommentProps {
   comment: CommentType;
@@ -173,12 +170,98 @@ const Comment: React.FC<CommentProps> = ({
         )}
 
         {/* Content */}
-        <div className="text-gray-900 dark:text-white leading-relaxed mb-4 text-base">
-          {comment.content.split("\n").map((paragraph, index) => (
-            <p key={index} className="mb-3 last:mb-0">
-              {paragraph}
-            </p>
-          ))}
+        <div className="text-gray-900 dark:text-white leading-relaxed mb-4 text-base prose prose-gray dark:prose-invert max-w-none">
+          <ReactMarkdown
+            remarkPlugins={[remarkGfm]}
+            rehypePlugins={[rehypeRaw]}
+            components={{
+              h1: ({ children }) => (
+                <h1 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">
+                  {children}
+                </h1>
+              ),
+              h2: ({ children }) => (
+                <h2 className="text-xl font-bold mb-3 text-gray-900 dark:text-white">
+                  {children}
+                </h2>
+              ),
+              h3: ({ children }) => (
+                <h3 className="text-lg font-bold mb-2 text-gray-900 dark:text-white">
+                  {children}
+                </h3>
+              ),
+              h4: ({ children }) => (
+                <h4 className="text-base font-bold mb-2 text-gray-900 dark:text-white">
+                  {children}
+                </h4>
+              ),
+              h5: ({ children }) => (
+                <h5 className="text-sm font-bold mb-1 text-gray-900 dark:text-white">
+                  {children}
+                </h5>
+              ),
+              h6: ({ children }) => (
+                <h6 className="text-xs font-bold mb-1 text-gray-900 dark:text-white">
+                  {children}
+                </h6>
+              ),
+              p: ({ children }) => (
+                <p className="mb-3 last:mb-0 text-gray-900 dark:text-white">
+                  {children}
+                </p>
+              ),
+              ul: ({ children }) => (
+                <ul className="list-disc list-inside mb-3 text-gray-900 dark:text-white">
+                  {children}
+                </ul>
+              ),
+              ol: ({ children }) => (
+                <ol className="list-decimal list-inside mb-3 text-gray-900 dark:text-white">
+                  {children}
+                </ol>
+              ),
+              li: ({ children }) => (
+                <li className="mb-1 text-gray-900 dark:text-white">
+                  {children}
+                </li>
+              ),
+              blockquote: ({ children }) => (
+                <blockquote className="border-l-4 border-primary pl-4 italic mb-3 text-gray-700 dark:text-gray-300">
+                  {children}
+                </blockquote>
+              ),
+              hr: () => (
+                <hr className="my-4 border-gray-300 dark:border-gray-600" />
+              ),
+              a: ({ href, children }) => (
+                <a
+                  href={href}
+                  className="text-primary hover:underline"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {children}
+                </a>
+              ),
+              strong: ({ children }) => (
+                <strong className="font-bold text-gray-900 dark:text-white">
+                  {children}
+                </strong>
+              ),
+              em: ({ children }) => (
+                <em className="italic text-gray-900 dark:text-white">
+                  {children}
+                </em>
+              ),
+              u: ({ children }) => (
+                <u className="underline text-gray-900 dark:text-white">
+                  {children}
+                </u>
+              ),
+            }}
+          >
+            {comment.content}
+          </ReactMarkdown>
         </div>
 
         {/* Attachment */}
@@ -263,7 +346,6 @@ const Comment: React.FC<CommentProps> = ({
             </div>
             <CommentForm
               onSubmit={handleReply}
-              placeholder="Share your thoughts..."
               buttonText="Post Reply"
               isLoading={isCreatingReply}
             />
