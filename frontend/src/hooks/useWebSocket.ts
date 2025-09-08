@@ -29,7 +29,7 @@ export const useWebSocket = (): UseWebSocketReturn => {
   useEffect(() => {
     // Ініціалізуємо Socket.IO клієнт
     const wsUrl = import.meta.env.VITE_WS_URL || "http://localhost:3001";
-    const socket = io(`${wsUrl}/comments`, {
+    const socket = io(wsUrl, {
       transports: ["websocket", "polling"],
       autoConnect: true,
     });

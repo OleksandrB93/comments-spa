@@ -1,9 +1,10 @@
 import { Resolver, Mutation, Query, Args, Int } from '@nestjs/graphql';
-import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe, UseGuards } from '@nestjs/common';
 import { CommentService } from './comment.service';
 import { CreateCommentInput, CreateReplyInput } from './comment.input';
 import { Comment, CommentsResponse } from './comment.model';
-import { RabbitMQTestService } from './rabbitmq-test.service';
+import { RabbitMQTestService } from '../rabbit/rabbitmq-test.service';
+import { RateLimitGuard, UserRateLimitGuard } from '../common/rate-limit.guard';
 
 @Resolver(() => Comment)
 export class CommentResolver {
@@ -13,6 +14,7 @@ export class CommentResolver {
   ) {}
 
   @Mutation(() => Comment)
+  @UseGuards(RateLimitGuard, UserRateLimitGuard)
   async createComment(
     @Args('input') input: CreateCommentInput,
   ): Promise<Comment> {
@@ -20,6 +22,7 @@ export class CommentResolver {
   }
 
   @Mutation(() => Comment)
+  @UseGuards(RateLimitGuard, UserRateLimitGuard)
   async createReply(@Args('input') input: CreateReplyInput): Promise<Comment> {
     return this.commentService.createReply(input);
   }

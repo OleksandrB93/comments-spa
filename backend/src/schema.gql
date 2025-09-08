@@ -73,6 +73,13 @@ type Mutation {
 }
 
 type Query {
+  commentStats: String!
   comments(postId: String!): [Comment!]!
   commentsPaginated(limit: Int! = 25, page: Int! = 1, postId: String!): CommentsResponse!
+  pageViewStats(postId: String!): String!
+  popularPosts(limit: Int! = 10): String!
+  postCommentCount(postId: String!): Int!
+  topCommenters(limit: Int! = 10): String!
+  userCommentCount(userId: String!): Int!
+  userCommentCountToday(userId: String!): Int!
 }

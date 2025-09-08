@@ -5,7 +5,9 @@ import { CreateCommentInput, CreateReplyInput } from './comment.input';
 import { Comment as GraphQLComment, CommentsResponse } from './comment.model';
 import { Comment, CommentDocument } from './schemas/comment.schema';
 import { CommentGateway } from './comment.gateway';
-import { RabbitMQService } from './rabbitmq.service';
+import { RabbitMQService } from '../rabbit/rabbitmq.service';
+import { RedisService } from '../common/redis.service';
+import { AnalyticsService } from '../common/analytics.service';
 
 @Injectable()
 export class CommentService {
@@ -13,6 +15,8 @@ export class CommentService {
     @InjectModel(Comment.name) private commentModel: Model<CommentDocument>,
     private commentGateway: CommentGateway,
     private rabbitMQService: RabbitMQService,
+    private redisService: RedisService,
+    private analyticsService: AnalyticsService,
   ) {}
 
   async createComment(input: CreateCommentInput): Promise<GraphQLComment> {
@@ -26,6 +30,12 @@ export class CommentService {
     });
     const savedComment = await newComment.save();
     const graphQLComment = await this.mapToGraphQLComment(savedComment);
+
+    // Invalidate cache for this post
+    await this.redisService.invalidateCommentCache(postId);
+
+    // Track analytics
+    await this.analyticsService.trackCommentCreation(postId, userId, username);
 
     // Send message to RabbitMQ for asynchronous processing
     await this.rabbitMQService.publish('comment.created', {
@@ -65,6 +75,12 @@ export class CommentService {
     const savedReply = await newReply.save();
     const graphQLReply = await this.mapToGraphQLComment(savedReply);
 
+    // Invalidate cache for this post
+    await this.redisService.invalidateCommentCache(postId);
+
+    // Track analytics
+    await this.analyticsService.trackCommentCreation(postId, userId, username);
+
     // Send message to RabbitMQ for asynchronous processing
     await this.rabbitMQService.publish('comment.created', {
       commentId: savedReply._id.toString(),
@@ -82,15 +98,32 @@ export class CommentService {
   }
 
   async getComments(postId: string): Promise<GraphQLComment[]> {
+    const cacheKey = `comments:post:${postId}:all`;
+
+    // Try to get from cache first
+    const cachedComments =
+      await this.redisService.getJson<GraphQLComment[]>(cacheKey);
+    if (cachedComments) {
+      console.log(`📦 Cache hit for comments: ${postId}`);
+      return cachedComments;
+    }
+
+    console.log(`💾 Cache miss for comments: ${postId}, fetching from DB`);
+
     // Return flat list of all comments for this post
     const allComments = await this.commentModel
       .find({ postId })
       .sort({ createdAt: -1 })
       .exec();
 
-    return await Promise.all(
+    const mappedComments = await Promise.all(
       allComments.map((comment) => this.mapToGraphQLComment(comment, false)),
     );
+
+    // Cache for 5 minutes
+    await this.redisService.setJson(cacheKey, mappedComments, 300);
+
+    return mappedComments;
   }
 
   async getCommentsPaginated(
@@ -98,15 +131,43 @@ export class CommentService {
     page: number = 1,
     limit: number = 25,
   ): Promise<CommentsResponse> {
+    const cacheKey = `comments:paginated:${postId}:${page}:${limit}`;
+    const countCacheKey = `comments:count:${postId}`;
+
+    // Try to get from cache first
+    const cachedResponse =
+      await this.redisService.getJson<CommentsResponse>(cacheKey);
+    if (cachedResponse) {
+      console.log(
+        `📦 Cache hit for paginated comments: ${postId}:${page}:${limit}`,
+      );
+      return cachedResponse;
+    }
+
+    console.log(
+      `💾 Cache miss for paginated comments: ${postId}:${page}:${limit}, fetching from DB`,
+    );
+
     const skip = (page - 1) * limit;
 
-    // Get total count of top-level comments
-    const totalCount = await this.commentModel
-      .countDocuments({
-        postId,
-        $or: [{ parentId: null }, { parentId: { $exists: false } }],
-      })
-      .exec();
+    // Try to get total count from cache first
+    let totalCount = await this.redisService.get(countCacheKey);
+    if (!totalCount) {
+      // Get total count of top-level comments
+      totalCount = (
+        await this.commentModel
+          .countDocuments({
+            postId,
+            $or: [{ parentId: null }, { parentId: { $exists: false } }],
+          })
+          .exec()
+      ).toString();
+
+      // Cache count for 10 minutes
+      await this.redisService.set(countCacheKey, totalCount, 600);
+    } else {
+      totalCount = parseInt(totalCount).toString();
+    }
 
     // Get top-level comments for pagination
     const topLevelComments = await this.commentModel
@@ -119,11 +180,28 @@ export class CommentService {
       .limit(limit)
       .exec();
 
-    // Get ALL comments for this post (flat list)
-    const allComments = await this.commentModel
-      .find({ postId })
-      .sort({ createdAt: -1 })
-      .exec();
+    // Get ALL comments for this post (flat list) - use cached version if available
+    const allCommentsCacheKey = `comments:post:${postId}:all`;
+    let allMappedComments =
+      await this.redisService.getJson<GraphQLComment[]>(allCommentsCacheKey);
+
+    if (!allMappedComments) {
+      const allComments = await this.commentModel
+        .find({ postId })
+        .sort({ createdAt: -1 })
+        .exec();
+
+      allMappedComments = await Promise.all(
+        allComments.map((comment) => this.mapToGraphQLComment(comment, false)),
+      );
+
+      // Cache all comments for 5 minutes
+      await this.redisService.setJson(
+        allCommentsCacheKey,
+        allMappedComments,
+        300,
+      );
+    }
 
     const mappedTopComments = await Promise.all(
       topLevelComments.map((comment) =>
@@ -131,20 +209,21 @@ export class CommentService {
       ),
     );
 
-    const allMappedComments = await Promise.all(
-      allComments.map((comment) => this.mapToGraphQLComment(comment, false)),
-    );
+    const totalPages = Math.ceil(parseInt(totalCount) / limit);
 
-    const totalPages = Math.ceil(totalCount / limit);
-
-    return {
+    const response: CommentsResponse = {
       comments: mappedTopComments,
       allComments: allMappedComments, // Flat list for frontend hierarchy building
-      totalCount,
+      totalCount: parseInt(totalCount),
       page,
       limit,
       totalPages,
     };
+
+    // Cache paginated response for 3 minutes
+    await this.redisService.setJson(cacheKey, response, 180);
+
+    return response;
   }
 
   async getCommentById(id: string): Promise<GraphQLComment | null> {

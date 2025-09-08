@@ -1,5 +1,5 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
-import { RabbitMQService } from './rabbitmq.service';
+import { RabbitMQService } from '../rabbit/rabbitmq.service';
 import { CommentGateway } from './comment.gateway';
 import { CommentService } from './comment.service';
 

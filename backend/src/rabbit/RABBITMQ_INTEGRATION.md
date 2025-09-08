@@ -1,9 +1,3 @@
-# RabbitMQ Integration in Comment Module
-
-## Overview
-
-This document describes the RabbitMQ integration in the comment module for asynchronous message processing.
-
 ## Architecture
 
 ```
