@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket Test</title>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+</head>
+<body>
+    <h1>WebSocket Test for Comments</h1>
+    <div id="status">Connecting...</div>
+    <div id="messages"></div>
+    
+    <script>
+        const socket = io('http://localhost:3002/comments');
+        
+        socket.on('connect', () => {
+            document.getElementById('status').innerHTML = 'Connected! Socket ID: ' + socket.id;
+            console.log('Connected to WebSocket');
+            
+            // Join a test post
+            socket.emit('join_post', { postId: 'test-post-123' });
+        });
+        
+        socket.on('disconnect', () => {
+            document.getElementById('status').innerHTML = 'Disconnected';
+            console.log('Disconnected from WebSocket');
+        });
+        
+        socket.on('new_comment', (message) => {
+            console.log('New comment received:', message);
+            const messagesDiv = document.getElementById('messages');
+            messagesDiv.innerHTML += '<div style="margin: 10px 0; padding: 10px; border: 1px solid #ccc;">' +
+                '<strong>New Comment:</strong><br>' +
+                'Type: ' + message.type + '<br>' +
+                'Content: ' + (message.data?.content || 'N/A') + '<br>' +
+                'Author: ' + (message.data?.author?.username || 'N/A') + '<br>' +
+                'Time: ' + new Date().toLocaleTimeString() +
+                '</div>';
+        });
+        
+        socket.on('joined_post', (data) => {
+            console.log('Joined post:', data);
+            document.getElementById('status').innerHTML += '<br>Joined post: ' + data.postId;
+        });
+    </script>
+</body>
+</html>
+
+

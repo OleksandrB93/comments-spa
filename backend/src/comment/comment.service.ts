@@ -4,11 +4,13 @@ import { Model, Types } from 'mongoose';
 import { CreateCommentInput, CreateReplyInput } from './comment.input';
 import { Comment as GraphQLComment, CommentsResponse } from './comment.model';
 import { Comment, CommentDocument } from './schemas/comment.schema';
+import { CommentGateway } from './comment.gateway';
 
 @Injectable()
 export class CommentService {
   constructor(
     @InjectModel(Comment.name) private commentModel: Model<CommentDocument>,
+    private commentGateway: CommentGateway,
   ) {}
 
   async createComment(input: CreateCommentInput): Promise<GraphQLComment> {
@@ -21,7 +23,12 @@ export class CommentService {
       attachment,
     });
     const savedComment = await newComment.save();
-    return await this.mapToGraphQLComment(savedComment);
+    const graphQLComment = await this.mapToGraphQLComment(savedComment);
+
+    // Відправляємо новий коментар через WebSocket
+    this.commentGateway.broadcastNewComment(postId, graphQLComment);
+
+    return graphQLComment;
   }
 
   async createReply(input: CreateReplyInput): Promise<GraphQLComment> {
@@ -44,8 +51,12 @@ export class CommentService {
     });
 
     const savedReply = await newReply.save();
+    const graphQLReply = await this.mapToGraphQLComment(savedReply);
 
-    return await this.mapToGraphQLComment(savedReply);
+    // Відправляємо новий відповідь через WebSocket
+    this.commentGateway.broadcastNewComment(postId, graphQLReply);
+
+    return graphQLReply;
   }
 
   async getComments(postId: string): Promise<GraphQLComment[]> {

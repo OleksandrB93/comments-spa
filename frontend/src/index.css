@@ -196,3 +196,14 @@
 [role="toolbar"] {
   background-color: var(--color-gray-700) !important;
 }
+
+.mdxeditor-popup-container{
+  display: none !important;
+}
+.mdxeditor-root-contenteditable{
+  height: calc(100% - 50px) !important;
+
+  div{
+    height: 100% !important;
+  }
+}

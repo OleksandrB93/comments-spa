@@ -329,10 +329,10 @@ const Comment: React.FC<CommentProps> = ({
             )}
           </Button>
 
-          {/* Comment ID badge */}
+          {/* Comment ID badge
           <div className="text-xs text-gray-400 dark:text-gray-500 font-mono bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded-md">
             #{comment.id.slice(-6)}
-          </div>
+          </div> */}
         </div>
 
         {/* Reply form */}

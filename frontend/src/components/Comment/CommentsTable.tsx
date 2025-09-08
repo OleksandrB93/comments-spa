@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import {
   ChevronUp,
   ChevronDown,
@@ -8,10 +8,11 @@ import {
 import Comment from "./Comment";
 import { Button } from "@/components/ui/button";
 import { GET_COMMENTS_PAGINATED } from "@/graphql/queries";
-import { useQuery } from "@apollo/client/react";
+import { useQuery, useApolloClient } from "@apollo/client/react";
 import type { CommentsPaginatedResponse } from "@/graphql/types";
-import type { Attachment } from "@/types";
+import type { Attachment, Comment as CommentType } from "@/types";
 import { buildCommentHierarchy } from "@/utils/utils";
+import { useWebSocket } from "@/hooks/useWebSocket";
 
 interface CommentsTableProps {
   postId: string;
@@ -39,6 +40,12 @@ const CommentsTable: React.FC<CommentsTableProps> = ({
   const [currentPage, setCurrentPage] = useState(1);
   const commentsPerPage = 25;
 
+  // WebSocket hook
+  const { isConnected, joinPost, leavePost, onNewComment } = useWebSocket();
+
+  // Apollo client for cache updates
+  const apolloClient = useApolloClient();
+
   // Fetch paginated comments from backend
   const { data: paginatedData, loading } = useQuery<CommentsPaginatedResponse>(
     GET_COMMENTS_PAGINATED,
@@ -51,6 +58,91 @@ const CommentsTable: React.FC<CommentsTableProps> = ({
       errorPolicy: "all",
     }
   );
+
+  // Stable callback for handling new comments
+  const handleNewComment = useCallback(
+    (newComment: CommentType) => {
+      console.log("New comment received via WebSocket:", newComment);
+      console.log("Current postId:", postId);
+      console.log("Comment postId:", newComment.postId);
+      console.log("PostIds match:", postId === newComment.postId);
+
+      // Only update if postIds match
+      if (postId === newComment.postId) {
+        console.log("Updating Apollo cache with new comment...");
+
+        // Update Apollo cache instead of refetching
+        apolloClient.cache.updateQuery(
+          {
+            query: GET_COMMENTS_PAGINATED,
+            variables: {
+              postId,
+              page: currentPage,
+              limit: commentsPerPage,
+            },
+          },
+          (existingData) => {
+            const data = existingData as CommentsPaginatedResponse | null;
+            if (!data?.commentsPaginated) return existingData;
+
+            // Ensure the new comment has all required fields for Apollo cache
+            const normalizedComment = {
+              ...newComment,
+              author: {
+                ...newComment.author,
+                homepage: newComment.author.homepage || null,
+              },
+              attachment: newComment.attachment || null,
+              parentId: newComment.parentId || null,
+              replies: newComment.replies || [],
+            };
+
+            // Add new comment to allComments array
+            const updatedAllComments = [
+              normalizedComment,
+              ...(data.commentsPaginated.allComments || []),
+            ];
+
+            // Update total count
+            const updatedTotalCount = data.commentsPaginated.totalCount + 1;
+
+            return {
+              ...data,
+              commentsPaginated: {
+                ...data.commentsPaginated,
+                allComments: updatedAllComments,
+                totalCount: updatedTotalCount,
+              },
+            };
+          }
+        );
+      }
+    },
+    [postId, apolloClient, currentPage, commentsPerPage]
+  );
+
+  // WebSocket connection management
+  useEffect(() => {
+    if (isConnected) {
+      console.log(`Setting up WebSocket for post: ${postId}`);
+      joinPost(postId);
+
+      // Set up new comment handler
+      onNewComment(handleNewComment);
+
+      return () => {
+        console.log(`Cleaning up WebSocket for post: ${postId}`);
+        leavePost(postId);
+      };
+    }
+  }, [
+    isConnected,
+    postId,
+    joinPost,
+    leavePost,
+    onNewComment,
+    handleNewComment,
+  ]);
 
   const allComments = paginatedData?.commentsPaginated?.allComments || [];
   const totalCount = paginatedData?.commentsPaginated?.totalCount || 0;
@@ -135,6 +227,22 @@ const CommentsTable: React.FC<CommentsTableProps> = ({
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+      {/* WebSocket Status Indicator */}
+      <div className="bg-gray-50 dark:bg-gray-700 px-6 py-2 border-b border-gray-200 dark:border-gray-600">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <div
+              className={`w-2 h-2 rounded-full ${
+                isConnected ? "bg-green-500" : "bg-red-500"
+              }`}
+            ></div>
+            <span className="text-xs text-gray-600 dark:text-gray-400">
+              {isConnected ? "Real-time updates active" : "Connecting..."}
+            </span>
+          </div>
+        </div>
+      </div>
+
       {/* Table Header */}
       <div className="bg-gray-50 dark:bg-gray-700 px-6 py-3 border-b border-gray-200 dark:border-gray-600">
         <div className="grid grid-cols-12 gap-4 text-sm font-medium text-gray-700 dark:text-gray-300">
