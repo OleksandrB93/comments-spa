@@ -1,0 +1,181 @@
+# Production Makefile for Comments SPA
+# Use this Makefile for production deployment on VM
+
+.PHONY: help install build start stop clean logs test deploy security backup
+
+# Default target
+help:
+	@echo "Production Commands:"
+	@echo "  deploy       - Deploy application to production"
+	@echo "  security     - Setup security configurations"
+	@echo "  backup       - Create backup of application data"
+	@echo "  install      - Install dependencies for all services"
+	@echo "  build        - Build all Docker images for production"
+	@echo "  start        - Start all production services"
+	@echo "  stop         - Stop all production services"
+	@echo "  restart      - Restart all production services"
+	@echo "  clean        - Remove all containers and volumes"
+	@echo "  logs         - Show logs for all services"
+	@echo "  status       - Show status of all services"
+	@echo "  update       - Update and restart services"
+	@echo "  monitor      - Monitor system resources"
+
+# Deploy to production
+deploy:
+	@echo "Deploying to production..."
+	./deploy.sh
+
+# Setup security
+security:
+	@echo "Setting up security..."
+	./security-setup.sh
+
+# Create backup
+backup:
+	@echo "Creating backup..."
+	@mkdir -p backups
+	@tar -czf backups/app_backup_$(shell date +%Y%m%d_%H%M%S).tar.gz .
+	@docker-compose -f docker-compose.prod.yml exec -T mongodb mongodump --archive | gzip > backups/mongodb_backup_$(shell date +%Y%m%d_%H%M%S).gz
+	@echo "Backup created in backups/ directory"
+
+# Install dependencies
+install:
+	@echo "Installing backend dependencies..."
+	cd backend && npm install
+	@echo "Installing frontend dependencies..."
+	cd frontend && npm install
+
+# Build Docker images for production
+build:
+	@echo "Building production Docker images..."
+	docker-compose -f docker-compose.prod.yml build --no-cache
+
+# Start all production services
+start:
+	@echo "Starting production services..."
+	docker-compose -f docker-compose.prod.yml up -d
+
+# Stop all production services
+stop:
+	@echo "Stopping production services..."
+	docker-compose -f docker-compose.prod.yml down
+
+# Restart all production services
+restart: stop start
+
+# Clean up production environment
+clean:
+	@echo "Cleaning up production environment..."
+	docker-compose -f docker-compose.prod.yml down -v --remove-orphans
+	docker system prune -f
+
+# Show logs for all services
+logs:
+	docker-compose -f docker-compose.prod.yml logs -f
+
+# Show status of all services
+status:
+	docker-compose -f docker-compose.prod.yml ps
+
+# Update and restart services
+update:
+	@echo "Updating services..."
+	git pull origin main
+	docker-compose -f docker-compose.prod.yml build --no-cache
+	docker-compose -f docker-compose.prod.yml up -d
+
+# Monitor system resources
+monitor:
+	@echo "System Resources:"
+	@echo "=================="
+	@echo "Memory Usage:"
+	@free -h
+	@echo ""
+	@echo "Disk Usage:"
+	@df -h
+	@echo ""
+	@echo "Docker Stats:"
+	@docker stats --no-stream
+	@echo ""
+	@echo "Container Status:"
+	@docker-compose -f docker-compose.prod.yml ps
+
+# Database operations
+db-backup:
+	@echo "Backing up database..."
+	@mkdir -p backups
+	@docker-compose -f docker-compose.prod.yml exec -T mongodb mongodump --archive | gzip > backups/mongodb_backup_$(shell date +%Y%m%d_%H%M%S).gz
+	@echo "Database backup completed"
+
+db-restore:
+	@echo "Restoring database from backup..."
+	@if [ -z "$(BACKUP_FILE)" ]; then echo "Usage: make db-restore BACKUP_FILE=backups/mongodb_backup_YYYYMMDD_HHMMSS.gz"; exit 1; fi
+	@docker-compose -f docker-compose.prod.yml exec -T mongodb mongorestore --archive --gzip < $(BACKUP_FILE)
+	@echo "Database restore completed"
+
+# SSL operations
+ssl-renew:
+	@echo "Renewing SSL certificates..."
+	@sudo certbot renew --quiet
+	@sudo cp /etc/letsencrypt/live/*/fullchain.pem ssl/cert.pem
+	@sudo cp /etc/letsencrypt/live/*/privkey.pem ssl/key.pem
+	@sudo chown $$USER:$$USER ssl/*.pem
+	@docker-compose -f docker-compose.prod.yml restart nginx
+	@echo "SSL certificates renewed"
+
+# Health check
+health:
+	@echo "Checking application health..."
+	@echo "Frontend:"
+	@curl -s -o /dev/null -w "%{http_code}" http://localhost:3000 || echo "Failed"
+	@echo ""
+	@echo "Backend API:"
+	@curl -s -o /dev/null -w "%{http_code}" http://localhost:3001/graphql || echo "Failed"
+	@echo ""
+	@echo "Database:"
+	@docker-compose -f docker-compose.prod.yml exec -T mongodb mongosh --eval "db.adminCommand('ping')" --quiet || echo "Failed"
+	@echo ""
+	@echo "Redis:"
+	@docker-compose -f docker-compose.prod.yml exec -T redis redis-cli ping || echo "Failed"
+
+# Performance test
+perf-test:
+	@echo "Running performance test..."
+	@echo "Testing API response time..."
+	@curl -w "@curl-format.txt" -o /dev/null -s http://localhost:3001/graphql
+	@echo "Testing frontend response time..."
+	@curl -w "@curl-format.txt" -o /dev/null -s http://localhost:3000
+
+# Create curl format file for performance testing
+curl-format.txt:
+	@echo "     time_namelookup:  %{time_namelookup}\n" > curl-format.txt
+	@echo "        time_connect:  %{time_connect}\n" >> curl-format.txt
+	@echo "     time_appconnect:  %{time_appconnect}\n" >> curl-format.txt
+	@echo "    time_pretransfer:  %{time_pretransfer}\n" >> curl-format.txt
+	@echo "       time_redirect:  %{time_redirect}\n" >> curl-format.txt
+	@echo "  time_starttransfer:  %{time_starttransfer}\n" >> curl-format.txt
+	@echo "                     ----------\n" >> curl-format.txt
+	@echo "          time_total:  %{time_total}\n" >> curl-format.txt
+
+# Maintenance mode
+maintenance-on:
+	@echo "Enabling maintenance mode..."
+	@docker-compose -f docker-compose.prod.yml exec nginx mv /etc/nginx/nginx.conf /etc/nginx/nginx.conf.backup
+	@docker-compose -f docker-compose.prod.yml exec nginx mv /etc/nginx/maintenance.conf /etc/nginx/nginx.conf
+	@docker-compose -f docker-compose.prod.yml exec nginx nginx -s reload
+	@echo "Maintenance mode enabled"
+
+maintenance-off:
+	@echo "Disabling maintenance mode..."
+	@docker-compose -f docker-compose.prod.yml exec nginx mv /etc/nginx/nginx.conf /etc/nginx/maintenance.conf
+	@docker-compose -f docker-compose.prod.yml exec nginx mv /etc/nginx/nginx.conf.backup /etc/nginx/nginx.conf
+	@docker-compose -f docker-compose.prod.yml exec nginx nginx -s reload
+	@echo "Maintenance mode disabled"
+
+# Quick setup for new VM
+quick-setup:
+	@echo "Quick setup for new VM..."
+	@chmod +x deploy.sh
+	@chmod +x security-setup.sh
+	@./deploy.sh
+	@echo "Quick setup completed. Run 'make security' for additional security setup."

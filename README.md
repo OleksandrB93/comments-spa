@@ -62,7 +62,7 @@ Web application for commenting using React, NestJS, GraphQL, MongoDB and other m
 1. **Clone repository**
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/OleksandrB93/comments-spa.git
 cd comments-spa
 ```
 
@@ -177,6 +177,19 @@ npm test
 ```
 
 ## 🚀 Deployment
+
+### Virtual Machine Deployment
+
+For deploying on a virtual machine, see the quick start guide:
+
+```bash
+# Quick deployment on VM
+./deploy.sh
+./security-setup.sh
+```
+
+📖 **Detailed VM deployment guide**: [VM-DEPLOYMENT.md](VM-DEPLOYMENT.md)  
+🚀 **Quick start for VM**: [QUICK-START-VM.md](QUICK-START-VM.md)
 
 ### Production Docker
 
