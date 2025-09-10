@@ -47,7 +47,7 @@ check_requirements() {
     fi
     
     # Check if Docker Compose is installed
-    if ! command -v docker-compose &> /dev/null && ! docker compose version &> /dev/null; then
+    if ! docker compose version &> /dev/null && ! command -v docker-compose &> /dev/null; then
         error "Docker Compose is not installed. Please install Docker Compose first."
     fi
     
@@ -163,27 +163,42 @@ update_env_with_ip() {
     fi
 }
 
+# Determine Docker Compose command
+get_docker_compose_cmd() {
+    if docker compose version &> /dev/null; then
+        echo "docker compose"
+    elif command -v docker-compose &> /dev/null; then
+        echo "docker-compose"
+    else
+        error "Docker Compose is not available"
+    fi
+}
+
 # Build and start services
 deploy_services() {
     log "Building and starting services..."
     
+    # Get the correct Docker Compose command
+    DOCKER_COMPOSE_CMD=$(get_docker_compose_cmd)
+    info "Using Docker Compose command: $DOCKER_COMPOSE_CMD"
+    
     # Stop any existing containers
-    docker-compose -f docker-compose.prod.yml down 2>/dev/null || true
+    $DOCKER_COMPOSE_CMD -f docker-compose.prod.yml down 2>/dev/null || true
     
     # Build images
     log "Building Docker images..."
-    docker-compose -f docker-compose.prod.yml build --no-cache
+    $DOCKER_COMPOSE_CMD -f docker-compose.prod.yml build --no-cache
     
     # Start services
     log "Starting services..."
-    docker-compose -f docker-compose.prod.yml up -d
+    $DOCKER_COMPOSE_CMD -f docker-compose.prod.yml up -d
     
     # Wait for services to be ready
     log "Waiting for services to start..."
     sleep 30
     
     # Check if services are running
-    if docker-compose -f docker-compose.prod.yml ps | grep -q "Up"; then
+    if $DOCKER_COMPOSE_CMD -f docker-compose.prod.yml ps | grep -q "Up"; then
         log "Services started successfully!"
         
         # Wait a bit more for WebSocket to be ready
@@ -201,7 +216,7 @@ deploy_services() {
             fi
         fi
     else
-        error "Some services failed to start. Check logs with: docker-compose -f docker-compose.prod.yml logs"
+        error "Some services failed to start. Check logs with: docker compose -f docker-compose.prod.yml logs"
     fi
 }
 
@@ -253,10 +268,10 @@ show_deployment_info() {
     echo "=========================================="
     echo "📋 Useful Commands:"
     echo "=========================================="
-    echo "View logs:    docker-compose -f docker-compose.prod.yml logs -f"
-    echo "Stop:         docker-compose -f docker-compose.prod.yml down"
-    echo "Restart:      docker-compose -f docker-compose.prod.yml restart"
-    echo "Status:       docker-compose -f docker-compose.prod.yml ps"
+    echo "View logs:    docker compose -f docker-compose.prod.yml logs -f"
+    echo "Stop:         docker compose -f docker-compose.prod.yml down"
+    echo "Restart:      docker compose -f docker-compose.prod.yml restart"
+    echo "Status:       docker compose -f docker-compose.prod.yml ps"
     echo ""
     echo "=========================================="
     echo "🔒 Security Notes:"
@@ -273,7 +288,7 @@ show_deployment_info() {
     echo "If you have issues with WebSocket:"
     echo "1. Check browser console for connection errors"
     echo "2. Verify firewall allows port 3001"
-    echo "3. Check backend logs: docker-compose -f docker-compose.prod.yml logs backend"
+    echo "3. Check backend logs: docker compose -f docker-compose.prod.yml logs backend"
     echo ""
 }
 
