@@ -149,9 +149,12 @@ update_env_with_ip() {
     local vm_ip=$1
     
     if [ -f .env ]; then
+        # Escape special characters in IP address for sed
+        escaped_ip=$(printf '%s\n' "$vm_ip" | sed 's/[[\.*^$()+?{|]/\\&/g')
+        
         # Update URLs with VM IP
-        sed -i "s/your-vm-ip/$vm_ip/g" .env
-        sed -i "s/localhost/$vm_ip/g" .env
+        sed -i "s/your-vm-ip/$escaped_ip/g" .env
+        sed -i "s/localhost/$escaped_ip/g" .env
         log "Updated .env file with VM IP: $vm_ip"
     fi
 }
