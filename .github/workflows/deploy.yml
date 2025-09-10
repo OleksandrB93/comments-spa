@@ -49,4 +49,5 @@ jobs:
             cd ~/comments-spa
             git fetch origin
             git reset --hard origin/main
-            docker compose -f docker-compose.prod.yml restart backend frontend
+            docker compose -f docker-compose.prod-hotreload.yml down backend frontend
+            docker compose -f docker-compose.prod-hotreload.yml up -d backend frontend
