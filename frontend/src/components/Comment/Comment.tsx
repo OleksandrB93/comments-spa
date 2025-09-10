@@ -14,10 +14,16 @@ import CommentForm from "./CommentForm";
 import { formSchema } from "@/utils/utils";
 import { z } from "zod";
 import { readFileAsBase64, resizeImage } from "@/utils/utils";
-import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
+import { DialogDescription } from "@radix-ui/react-dialog";
 
 interface CommentProps {
   comment: CommentType;
@@ -277,12 +283,18 @@ const Comment: React.FC<CommentProps> = ({
                   />
                 </DialogTrigger>
                 <DialogContent className="max-w-full h-auto">
+                  <DialogTitle className="sr-only">
+                    {comment.attachment.filename}
+                  </DialogTitle>
                   <img
                     src={`data:${comment.attachment.mimeType};base64,${comment.attachment.data}`}
                     alt={comment.attachment.filename}
                     className="w-full h-auto rounded-lg border border-gray-200 dark:border-gray-700"
                   />
                 </DialogContent>
+                <DialogDescription className="sr-only">
+                  {comment.attachment.filename}
+                </DialogDescription>
               </Dialog>
             ) : (
               <div className="p-4 bg-gray-100 dark:bg-gray-800 rounded-lg">

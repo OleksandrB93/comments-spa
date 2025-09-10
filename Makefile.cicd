@@ -1,0 +1,122 @@
+# Comments SPA - CI/CD Makefile
+
+.PHONY: help deploy quick-update full-update status logs test clean
+
+# Default target
+help:
+	@echo "Available CI/CD commands:"
+	@echo "  deploy        - Full deployment with container rebuild"
+	@echo "  quick-update  - Quick code update without rebuild"
+	@echo "  full-update   - Full code update with rebuild"
+	@echo "  status        - Show services status"
+	@echo "  logs          - Show services logs"
+	@echo "  test          - Test deployment"
+	@echo "  clean         - Clean up containers and volumes"
+
+# Full deployment (first time or major changes)
+deploy:
+	@echo "🚀 Starting full deployment..."
+	./deploy.sh
+
+# Quick update (recommended for small changes)
+quick-update:
+	@echo "⚡ Starting quick update..."
+	./scripts/quick-update.sh
+
+# Full update (for dependency changes or major updates)
+full-update:
+	@echo "🔄 Starting full update..."
+	./scripts/update-code.sh
+
+# Show services status
+status:
+	@echo "📊 Services Status:"
+	docker compose -f docker-compose.prod.yml ps
+
+# Show services logs
+logs:
+	@echo "📋 Services Logs:"
+	docker compose -f docker-compose.prod.yml logs -f
+
+# Test deployment
+test:
+	@echo "🧪 Testing deployment..."
+	@echo "Testing backend..."
+	@curl -s http://localhost:3001/graphql > /dev/null && echo "✅ Backend is responding" || echo "❌ Backend is not responding"
+	@echo "Testing frontend..."
+	@curl -s http://localhost:3000 > /dev/null && echo "✅ Frontend is responding" || echo "❌ Frontend is not responding"
+
+# Clean up
+clean:
+	@echo "🧹 Cleaning up..."
+	docker compose -f docker-compose.prod.yml down -v --remove-orphans
+	docker system prune -f
+
+# Restart services
+restart:
+	@echo "🔄 Restarting services..."
+	docker compose -f docker-compose.prod.yml restart backend frontend
+
+# Show deployment info
+info:
+	@echo "=========================================="
+	@echo "🚀 Comments SPA - Deployment Info"
+	@echo "=========================================="
+	@echo "Frontend:     http://localhost:3000"
+	@echo "Backend API:  http://localhost:3001/graphql"
+	@echo "WebSocket:    ws://localhost:3001"
+	@echo "RabbitMQ:     http://localhost:15672"
+	@echo "Elasticsearch: http://localhost:9200"
+	@echo "=========================================="
+
+# Development commands
+dev:
+	@echo "🛠️ Starting development environment..."
+	docker compose up -d
+
+dev-logs:
+	@echo "📋 Development logs:"
+	docker compose logs -f
+
+# Production commands
+prod:
+	@echo "🏭 Starting production environment..."
+	docker compose -f docker-compose.prod.yml up -d
+
+prod-logs:
+	@echo "📋 Production logs:"
+	docker compose -f docker-compose.prod.yml logs -f
+
+# Hot reload production
+prod-hotreload:
+	@echo "🔥 Starting production with hot reload..."
+	docker compose -f docker-compose.prod-hotreload.yml up -d
+
+# Database operations
+db-backup:
+	@echo "💾 Backing up database..."
+	docker compose -f docker-compose.prod.yml exec mongodb mongodump --out /data/backup
+
+db-restore:
+	@echo "📥 Restoring database..."
+	docker compose -f docker-compose.prod.yml exec mongodb mongorestore /data/backup
+
+# Security check
+security-check:
+	@echo "🔒 Running security checks..."
+	@echo "Checking for default passwords..."
+	@grep -q "password123" .env && echo "⚠️  WARNING: Default password detected" || echo "✅ No default passwords found"
+	@echo "Checking SSL configuration..."
+	@test -d ssl && echo "✅ SSL directory exists" || echo "⚠️  WARNING: SSL directory not found"
+
+# Performance monitoring
+monitor:
+	@echo "📈 Performance monitoring:"
+	@echo "Docker stats:"
+	docker stats --no-stream
+	@echo ""
+	@echo "Disk usage:"
+	df -h
+	@echo ""
+	@echo "Memory usage:"
+	free -h
