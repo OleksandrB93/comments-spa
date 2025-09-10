@@ -137,6 +137,9 @@ get_vm_ip() {
         VM_IP=$(echo "$VM_IP" | tr -d '\n\r\t ')
     fi
     
+    # Clean up any color codes that might have been added
+    VM_IP=$(echo "$VM_IP" | sed 's/\x1b\[[0-9;]*m//g')
+    
     info "Detected VM IP: $VM_IP"
     echo "$VM_IP"
 }
@@ -144,6 +147,9 @@ get_vm_ip() {
 # Update environment with VM IP
 update_env_with_ip() {
     local vm_ip=$1
+    
+    # Clean up any color codes from the IP
+    vm_ip=$(echo "$vm_ip" | sed 's/\x1b\[[0-9;]*m//g' | tr -d '\n\r\t ')
     
     if [ -f .env ]; then
         # Use perl for more reliable string replacement
