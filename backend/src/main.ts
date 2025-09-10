@@ -31,7 +31,31 @@ async function bootstrap() {
 
   // Enable CORS for frontend
   app.enableCors({
-    origin: ['http://localhost:3000', 'http://localhost:5173'], // Support both Docker and dev server
+    origin: (origin, callback) => {
+      // Дозволяємо запити без origin (наприклад, мобільні додатки, Postman)
+      if (!origin) return callback(null, true);
+
+      // Список дозволених доменів
+      const allowedOrigins = [
+        'http://localhost:3000',
+        'http://localhost:5173',
+        'http://localhost:3001',
+        // Додаємо підтримку для будь-якого домену в production
+        ...(process.env.NODE_ENV === 'production' ? ['*'] : []),
+      ];
+
+      // Якщо це production, дозволяємо всі домени
+      if (process.env.NODE_ENV === 'production') {
+        return callback(null, true);
+      }
+
+      // В development режимі перевіряємо список дозволених доменів
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      callback(new Error('Not allowed by CORS'));
+    },
     credentials: true,
   });
 

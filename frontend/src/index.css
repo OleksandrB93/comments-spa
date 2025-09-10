@@ -114,7 +114,8 @@
 @layer base {
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground pt-18;
+    
   }
 
   /* Custom Modern Scrollbar Styles */

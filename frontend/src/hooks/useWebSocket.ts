@@ -28,7 +28,28 @@ export const useWebSocket = (): UseWebSocketReturn => {
 
   useEffect(() => {
     // Ініціалізуємо Socket.IO клієнт
-    const wsUrl = import.meta.env.VITE_WS_URL || "http://localhost:3001";
+    // Dynamicly get the WebSocket URL
+    const getWebSocketUrl = () => {
+      // If there is an environment variable, use it
+      if (import.meta.env.VITE_WS_URL) {
+        return import.meta.env.VITE_WS_URL;
+      }
+
+      // Otherwise, determine the URL dynamically based on the current host
+      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+      const host = window.location.hostname;
+      const port =
+        window.location.port ||
+        (window.location.protocol === "https:" ? "443" : "80");
+
+      const portSuffix = port === "80" || port === "443" ? "" : `:${port}`;
+
+      return `${protocol}//${host}${portSuffix}`;
+    };
+
+    const wsUrl = getWebSocketUrl();
+    console.log("WebSocket URL:", wsUrl);
+
     const socket = io(wsUrl, {
       transports: ["websocket", "polling"],
       autoConnect: true,
@@ -36,7 +57,7 @@ export const useWebSocket = (): UseWebSocketReturn => {
 
     socketRef.current = socket;
 
-    // Обробники подій підключення
+    // Event handlers for connection
     socket.on("connect", () => {
       console.log("WebSocket connected:", socket.id);
       setIsConnected(true);
@@ -52,7 +73,7 @@ export const useWebSocket = (): UseWebSocketReturn => {
       setIsConnected(false);
     });
 
-    // Обробники повідомлень
+    // Event handlers for messages
     socket.on("new_comment", (message: WebSocketMessage) => {
       console.log("New comment received:", message);
       console.log("Message data:", message.data);
@@ -78,7 +99,7 @@ export const useWebSocket = (): UseWebSocketReturn => {
       }
     });
 
-    // Cleanup при розмонтуванні
+    // Cleanup when unmounting
     return () => {
       socket.disconnect();
       socketRef.current = null;

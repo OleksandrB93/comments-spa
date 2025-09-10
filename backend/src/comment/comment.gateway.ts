@@ -12,11 +12,28 @@ import { Logger } from '@nestjs/common';
 
 @WebSocketGateway({
   cors: {
-    origin: [
-      'http://localhost:3000',
-      'http://localhost:5173',
-      'http://localhost:3000',
-    ],
+    origin: (origin, callback) => {
+      // Allow requests without origin
+      if (!origin) return callback(null, true);
+
+      // In production allow all domains
+      if (process.env.NODE_ENV === 'production') {
+        return callback(null, true);
+      }
+
+      // In development mode check the list of allowed domains
+      const allowedOrigins = [
+        'http://localhost:3000',
+        'http://localhost:5173',
+        'http://localhost:3001',
+      ];
+
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      callback(new Error('Not allowed by CORS'));
+    },
     credentials: true,
   },
   namespace: '/comments',

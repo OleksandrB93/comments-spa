@@ -109,8 +109,8 @@ setup_environment() {
     
     # Create .env file if it doesn't exist
     if [ ! -f .env ]; then
-        if [ -f env.prod.example ]; then
-            cp env.prod.example .env
+        if [ -f env.example ]; then
+            cp env.example .env
             warn "Created .env file from template. Please edit it with your actual values."
         else
             error "No environment template found. Please create .env file manually."
@@ -147,10 +147,19 @@ update_env_with_ip() {
     
     if [ -f .env ]; then
         # Use perl for more reliable string replacement
-        perl -i -pe "s/your-vm-ip/$vm_ip/g" .env
+        perl -i -pe "s/your-domain\.com/$vm_ip/g" .env
         perl -i -pe "s/localhost/$vm_ip/g" .env
         
+        # Ensure NODE_ENV is set to production
+        if ! grep -q "NODE_ENV=production" .env; then
+            echo "NODE_ENV=production" >> .env
+        fi
+        
         log "Updated .env file with VM IP: $vm_ip"
+        info "Environment variables updated:"
+        info "  FRONTEND_URL=http://$vm_ip:3000"
+        info "  VITE_APP_API_URL=http://$vm_ip:3001/graphql"
+        info "  VITE_WS_URL=ws://$vm_ip:3001"
     fi
 }
 
@@ -176,6 +185,21 @@ deploy_services() {
     # Check if services are running
     if docker-compose -f docker-compose.prod.yml ps | grep -q "Up"; then
         log "Services started successfully!"
+        
+        # Wait a bit more for WebSocket to be ready
+        log "Waiting for WebSocket to be ready..."
+        sleep 10
+        
+        # Test WebSocket connection
+        log "Testing WebSocket connection..."
+        if command -v curl &> /dev/null; then
+            # Test if backend is responding
+            if curl -s "http://localhost:3001/graphql" > /dev/null; then
+                log "Backend is responding correctly"
+            else
+                warn "Backend might not be ready yet"
+            fi
+        fi
     else
         error "Some services failed to start. Check logs with: docker-compose -f docker-compose.prod.yml logs"
     fi
@@ -241,6 +265,15 @@ show_deployment_info() {
     echo "2. Configure SSL certificates for HTTPS"
     echo "3. Set up proper domain name"
     echo "4. Configure backup strategy"
+    echo ""
+    echo "=========================================="
+    echo "🔌 WebSocket Configuration:"
+    echo "=========================================="
+    echo "WebSocket will automatically connect to: ws://$vm_ip:3001"
+    echo "If you have issues with WebSocket:"
+    echo "1. Check browser console for connection errors"
+    echo "2. Verify firewall allows port 3001"
+    echo "3. Check backend logs: docker-compose -f docker-compose.prod.yml logs backend"
     echo ""
 }
 
