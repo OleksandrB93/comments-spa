@@ -47,4 +47,5 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
             cd ~/comments-spa
-            ./scripts/update-code.sh
+            git pull origin main
+            docker compose -f docker-compose.prod.yml restart backend frontend
