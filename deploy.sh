@@ -126,7 +126,7 @@ setup_environment() {
     log "Environment setup completed."
 }
 
-# Get VM IP address
+# Get VM IP address and create clean .env file
 get_vm_ip() {
     # Try to get the primary IP address
     VM_IP=$(hostname -I | awk '{print $1}')
