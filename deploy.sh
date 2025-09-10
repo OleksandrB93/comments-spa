@@ -90,9 +90,9 @@ install_docker() {
     curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
     
     # Set up the stable repository
-    echo \
-        "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu \
-        $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+    ARCH=$(dpkg --print-architecture)
+    CODENAME=$(lsb_release -cs)
+    echo "deb [arch=${ARCH} signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu ${CODENAME} stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
     
     # Install Docker Engine
     sudo apt-get update
@@ -137,7 +137,9 @@ get_vm_ip() {
     VM_IP=$(hostname -I | awk '{print $1}')
     
     if [ -z "$VM_IP" ]; then
-        VM_IP=$(curl -s ifconfig.me || curl -s ipinfo.io/ip || echo "localhost")
+        VM_IP=$(curl -s ifconfig.me 2>/dev/null || curl -s ipinfo.io/ip 2>/dev/null || echo "localhost")
+        # Clean up any whitespace or newlines
+        VM_IP=$(echo "$VM_IP" | tr -d '\n\r\t ')
     fi
     
     info "Detected VM IP: $VM_IP"
@@ -150,7 +152,7 @@ update_env_with_ip() {
     
     if [ -f .env ]; then
         # Escape special characters in IP address for sed
-        escaped_ip=$(printf '%s\n' "$vm_ip" | sed 's/[[\.*^$()+?{|]/\\&/g')
+        escaped_ip=$(printf '%s\n' "$vm_ip" | sed 's/[\.*^$()+?{|]/\\&/g')
         
         # Update URLs with VM IP
         sed -i "s/your-vm-ip/$escaped_ip/g" .env
