@@ -85,6 +85,9 @@ const CommentsTable: React.FC<CommentsTableProps> = ({
             const data = existingData as CommentsPaginatedResponse | null;
             if (!data?.commentsPaginated) return existingData;
 
+            // Since Apollo cache updates are disabled, WebSocket is the only source of updates
+            // No need to check for existing comments
+
             // Ensure the new comment has all required fields for Apollo cache
             const normalizedComment = {
               ...newComment,
@@ -95,6 +98,7 @@ const CommentsTable: React.FC<CommentsTableProps> = ({
               attachment: newComment.attachment || null,
               parentId: newComment.parentId || null,
               replies: newComment.replies || [],
+              createdAt: newComment.createdAt || new Date().toISOString(),
             };
 
             // Add new comment to allComments array
@@ -151,7 +155,16 @@ const CommentsTable: React.FC<CommentsTableProps> = ({
   // Build hierarchy from flat list for unlimited nesting
   const hierarchicalComments = useMemo(() => {
     if (allComments.length === 0) return [];
-    return buildCommentHierarchy(allComments);
+
+    // Remove duplicates based on comment ID
+    const uniqueComments = allComments.reduce((acc, comment) => {
+      if (!acc.find((c) => c.id === comment.id)) {
+        acc.push(comment);
+      }
+      return acc;
+    }, [] as CommentType[]);
+
+    return buildCommentHierarchy(uniqueComments);
   }, [allComments]);
 
   const handleSort = (field: SortField) => {

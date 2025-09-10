@@ -41,7 +41,7 @@ const Header = () => {
     <header
       className={`fixed z-50 flex justify-between items-center p-4 border-b border-border transition-all duration-200 ${
         isScrolled
-          ? "top-4 left-[1rem] bg-indigo-900/70 backdrop-blur-[4px] rounded-lg w-[calc(100%-2rem)] shadow-[0_2px_6px_3px_rgba(0,0,0,0.1)] shadow-primary/40"
+          ? "top-4 left-[1rem] bg-background/70 backdrop-blur-[4px] rounded-lg w-[calc(100%-2rem)] shadow-[0_2px_6px_3px_rgba(0,0,0,0.1)] shadow-primary/40"
           : "top-0 left-0 w-full rounded-none bg-background"
       }`}
     >

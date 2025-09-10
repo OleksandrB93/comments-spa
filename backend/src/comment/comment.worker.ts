@@ -109,6 +109,15 @@ export class CommentWorker implements OnModuleInit {
     try {
       this.logger.log(`Processing comment created: ${message.commentId}`);
 
+      // Get the comment from database to get the actual createdAt
+      const comment = await this.commentService.getCommentById(
+        message.commentId,
+      );
+      if (!comment) {
+        this.logger.error(`Comment not found: ${message.commentId}`);
+        return;
+      }
+
       // 1. If there is a file - send to processing
       if (message.attachment) {
         await this.rabbitMQService.publish('file.processing', {
@@ -141,6 +150,7 @@ export class CommentWorker implements OnModuleInit {
             author: message.author,
             attachment: message.attachment,
             parentId: message.parentId,
+            createdAt: comment.createdAt,
           },
         },
       );

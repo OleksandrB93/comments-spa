@@ -86,10 +86,13 @@ const PostWithComments: React.FC<PostWithCommentsProps> = ({ post }) => {
             attachment,
           },
         },
+        // Disable Apollo cache updates - let WebSocket handle the updates
+        update: () => {},
+        refetchQueries: [],
       });
 
-      // Note: CommentsTable will automatically refetch its data
-      // No need to manually refetch since it uses useQuery
+      // Note: WebSocket will handle updating the comments list
+      // Apollo cache updates are disabled to prevent duplication
     } catch (error) {
       console.error("Error creating comment:", error);
     }
@@ -115,10 +118,13 @@ const PostWithComments: React.FC<PostWithCommentsProps> = ({ post }) => {
             attachment,
           },
         },
+        // Disable Apollo cache updates - let WebSocket handle the updates
+        update: () => {},
+        refetchQueries: [],
       });
 
-      // Note: CommentsTable will automatically refetch its data
-      // No need to manually refetch since it uses useQuery
+      // Note: WebSocket will handle updating the comments list
+      // Apollo cache updates are disabled to prevent duplication
     } catch (error) {
       console.error("Error creating reply:", error);
     }
