@@ -50,7 +50,7 @@ export const useWebSocket = (): UseWebSocketReturn => {
     const wsUrl = getWebSocketUrl();
     console.log("WebSocket URL:", wsUrl);
 
-    const socket = io(wsUrl, {
+    const socket = io(wsUrl + "/comments", {
       transports: ["websocket", "polling"],
       autoConnect: true,
     });

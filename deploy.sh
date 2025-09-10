@@ -137,11 +137,9 @@ get_vm_ip() {
         VM_IP=$(echo "$VM_IP" | tr -d '\n\r\t ')
     fi
     
-    # Clean up any color codes that might have been added
-    VM_IP=$(echo "$VM_IP" | sed 's/\x1b\[[0-9;]*m//g')
-    
     info "Detected VM IP: $VM_IP"
-    echo "$VM_IP"
+    # Return clean IP without color codes
+    echo "$VM_IP" | tr -d '\n\r\t '
 }
 
 # Update environment with VM IP
@@ -165,7 +163,7 @@ update_env_with_ip() {
         info "Environment variables updated:"
         info "  FRONTEND_URL=http://$vm_ip:3000"
         info "  VITE_APP_API_URL=http://$vm_ip:3001/graphql"
-        info "  VITE_WS_URL=ws://$vm_ip:3001"
+        info "  VITE_WS_URL=ws://$vm_ip:3001/comments"
     fi
 }
 
@@ -263,7 +261,7 @@ show_deployment_info() {
     echo "=========================================="
     echo "Frontend:     http://$vm_ip:3000"
     echo "Backend API:  http://$vm_ip:3001/graphql"
-    echo "WebSocket:    ws://$vm_ip:3001"
+    echo "WebSocket:    ws://$vm_ip:3001/comments"
     echo ""
     echo "=========================================="
     echo "🔧 Management URLs:"
@@ -290,7 +288,7 @@ show_deployment_info() {
     echo "=========================================="
     echo "🔌 WebSocket Configuration:"
     echo "=========================================="
-    echo "WebSocket will automatically connect to: ws://$vm_ip:3001"
+    echo "WebSocket will automatically connect to: ws://$vm_ip:3001/comments"
     echo "If you have issues with WebSocket:"
     echo "1. Check browser console for connection errors"
     echo "2. Verify firewall allows port 3001"
