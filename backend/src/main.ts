@@ -74,8 +74,6 @@ async function bootstrap() {
   console.log(
     `GraphQL Playground: http://localhost:${process.env.PORT ?? 3001}/graphql`,
   );
-  console.log(
-    `WebSocket Gateway: ws://localhost:${process.env.PORT ?? 3001}/comments`,
-  );
+  console.log(`WebSocket Gateway: ws://localhost:${process.env.PORT ?? 3001}`);
 }
 bootstrap();

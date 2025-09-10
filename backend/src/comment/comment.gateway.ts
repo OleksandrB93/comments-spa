@@ -36,7 +36,6 @@ import { Logger } from '@nestjs/common';
     },
     credentials: true,
   },
-  namespace: '/comments',
 })
 export class CommentGateway
   implements OnGatewayConnection, OnGatewayDisconnect

@@ -1,6 +1,7 @@
 {
   "dependencies": {
     "@mdxeditor/editor": "^3.43.0",
-    "@radix-ui/react-dropdown-menu": "^2.1.16"
+    "@radix-ui/react-dropdown-menu": "^2.1.16",
+    "socket.io-client": "^4.8.1"
   }
 }

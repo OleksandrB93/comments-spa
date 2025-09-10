@@ -38,19 +38,21 @@ export const useWebSocket = (): UseWebSocketReturn => {
       // Otherwise, determine the URL dynamically based on the current host
       const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
       const host = window.location.hostname;
-      const port =
-        window.location.port ||
-        (window.location.protocol === "https:" ? "443" : "80");
 
-      const portSuffix = port === "80" || port === "443" ? "" : `:${port}`;
+      // Use backend port (3001) instead of frontend port
+      const backendPort = "3001";
+      const portSuffix = `:${backendPort}`;
 
       return `${protocol}//${host}${portSuffix}`;
     };
 
     const wsUrl = getWebSocketUrl();
     console.log("WebSocket URL:", wsUrl);
+    console.log("Environment VITE_WS_URL:", import.meta.env.VITE_WS_URL);
+    console.log("Current location:", window.location.href);
 
-    const socket = io(wsUrl + "/comments", {
+    const socket = io(wsUrl, {
+      path: "/socket.io/",
       transports: ["websocket", "polling"],
       autoConnect: true,
     });
