@@ -41,9 +41,6 @@ Web application for commenting using React, NestJS, GraphQL, MongoDB and other m
 - ✅ XSS and SQL injection protection
 
 ### Additional Features
-
-- 🔐 JWT authentication
-- 🔍 Search through Elasticsearch
 - ⚡ Caching through Redis
 - 📨 Queues for file processing
 - 🔄 Real-time updates through WebSocket
