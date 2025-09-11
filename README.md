@@ -8,8 +8,8 @@ Web application for commenting using React, NestJS, GraphQL, MongoDB and other m
 
 - **React 18** with TypeScript
 - **Apollo Client** for GraphQL
-- **Material-UI** for UI components
-- **Formik + Yup** for form validation
+- **Shadcn** for UI components
+- **ReactHookForm+ Zod** for form validation
 - **React Router** for navigation
 
 ### Backend
@@ -17,14 +17,12 @@ Web application for commenting using React, NestJS, GraphQL, MongoDB and other m
 - **NestJS** as main framework
 - **GraphQL** (Apollo Server)
 - **MongoDB** with Mongoose ODM
-- **JWT** for authentication
 - **Redis** for caching
 - **Bull Queue** for queues
 - **WebSocket** for real-time updates
 
 ### Additional Services
 
-- **Elasticsearch** for search
 - **RabbitMQ** as message broker
 - **Docker** for containerization
 
