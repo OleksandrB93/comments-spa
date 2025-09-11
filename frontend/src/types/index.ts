@@ -46,3 +46,8 @@ export interface VoteAction {
   targetId: string;
   targetType: "post" | "comment";
 }
+
+export interface DeleteCommentInput {
+  commentId: string;
+  userId: string;
+}

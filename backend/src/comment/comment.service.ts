@@ -1,7 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { CreateCommentInput, CreateReplyInput } from './comment.input';
+import {
+  CreateCommentInput,
+  CreateReplyInput,
+  DeleteCommentInput,
+} from './comment.input';
 import { Comment as GraphQLComment, CommentsResponse } from './comment.model';
 import { Comment, CommentDocument } from './schemas/comment.schema';
 import { CommentGateway } from './comment.gateway';
@@ -241,6 +245,107 @@ export class CommentService {
     return await Promise.all(
       comments.map((comment) => this.mapToGraphQLComment(comment, true)),
     );
+  }
+
+  async deleteComment(input: DeleteCommentInput): Promise<boolean> {
+    const { commentId, userId } = input;
+
+    // Find the comment to verify ownership
+    const comment = await this.commentModel.findById(commentId).exec();
+    if (!comment) {
+      throw new Error('Comment not found');
+    }
+
+    // Check if user is the author of the comment
+    if (comment.author.userId !== userId) {
+      throw new Error('Unauthorized: You can only delete your own comments');
+    }
+
+    // Delete the comment and all its replies
+    const result = await this.commentModel.deleteOne({ _id: commentId }).exec();
+
+    if (result.deletedCount === 0) {
+      throw new Error('Failed to delete comment');
+    }
+
+    // Count all comments that will be deleted (including replies)
+    const repliesCount = await this.countCommentsToDelete(commentId);
+
+    // Also delete all replies to this comment (recursively)
+    await this.deleteCommentAndReplies(commentId);
+
+    // Invalidate cache for this post
+    await this.redisService.invalidateCommentCache(comment.postId);
+
+    // Track analytics for the main comment
+    await this.analyticsService.trackCommentDeletion(
+      comment.postId,
+      userId,
+      comment.author.username,
+    );
+
+    // Track analytics for all replies (if any)
+    if (repliesCount > 0) {
+      for (let i = 0; i < repliesCount; i++) {
+        await this.analyticsService.trackCommentDeletion(
+          comment.postId,
+          userId,
+          comment.author.username,
+        );
+      }
+    }
+
+    // Send message to RabbitMQ for asynchronous processing
+    await this.rabbitMQService.publish('comment.deleted', {
+      commentId,
+      postId: comment.postId,
+      author: comment.author,
+    });
+
+    // Broadcast deletion through WebSocket
+    this.commentGateway.broadcastDeletedComment(comment.postId, commentId);
+
+    return true;
+  }
+
+  /**
+   * Recursively delete a comment and all its replies
+   */
+  private async deleteCommentAndReplies(commentId: string): Promise<void> {
+    // Find all direct replies to this comment
+    const replies = await this.commentModel
+      .find({ parentId: commentId })
+      .exec();
+
+    // Recursively delete all replies first
+    for (const reply of replies) {
+      await this.deleteCommentAndReplies(reply._id.toString());
+    }
+
+    // Delete all direct replies
+    await this.commentModel.deleteMany({ parentId: commentId }).exec();
+  }
+
+  /**
+   * Count all comments that will be deleted (including replies)
+   */
+  private async countCommentsToDelete(commentId: string): Promise<number> {
+    let count = 0;
+
+    // Find all direct replies to this comment
+    const replies = await this.commentModel
+      .find({ parentId: commentId })
+      .exec();
+
+    // Count replies recursively
+    for (const reply of replies) {
+      count += await this.countCommentsToDelete(reply._id.toString());
+    }
+
+    // Add direct replies count
+    count += replies.length;
+
+    return count;
   }
 
   private async mapToGraphQLComment(

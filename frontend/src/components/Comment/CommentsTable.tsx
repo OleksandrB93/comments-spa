@@ -23,7 +23,9 @@ interface CommentsTableProps {
     author: { username: string; email: string; homepage?: string },
     attachment?: Attachment
   ) => void;
+  onDelete?: (commentId: string) => void;
   isCreatingReply?: boolean;
+  currentUserId?: string;
 }
 
 type SortField = "username" | "email" | "createdAt";
@@ -33,7 +35,9 @@ const CommentsTable: React.FC<CommentsTableProps> = ({
   postId,
   onVote,
   onReply,
+  onDelete,
   isCreatingReply = false,
+  currentUserId,
 }) => {
   const [sortField, setSortField] = useState<SortField>("createdAt");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
@@ -41,7 +45,8 @@ const CommentsTable: React.FC<CommentsTableProps> = ({
   const commentsPerPage = 25;
 
   // WebSocket hook
-  const { isConnected, joinPost, leavePost, onNewComment } = useWebSocket();
+  const { isConnected, joinPost, leavePost, onNewComment, onDeletedComment } =
+    useWebSocket();
 
   // Apollo client for cache updates
   const apolloClient = useApolloClient();
@@ -125,6 +130,111 @@ const CommentsTable: React.FC<CommentsTableProps> = ({
     [postId, apolloClient, currentPage, commentsPerPage]
   );
 
+  // Helper function to recursively find and remove comments and their replies
+  const removeCommentAndReplies = useCallback(
+    (
+      comments: CommentType[],
+      commentIdToRemove: string
+    ): {
+      filteredComments: CommentType[];
+      removedCount: number;
+    } => {
+      let removedCount = 0;
+
+      const filteredComments = comments.filter((comment) => {
+        if (comment.id === commentIdToRemove) {
+          // Count this comment and all its replies
+          const countReplies = (comment: CommentType): number => {
+            let count = 1; // Count the comment itself
+            if (comment.replies && comment.replies.length > 0) {
+              comment.replies.forEach((reply) => {
+                count += countReplies(reply);
+              });
+            }
+            return count;
+          };
+          removedCount += countReplies(comment);
+          return false; // Remove this comment
+        }
+
+        // Recursively process replies
+        if (comment.replies && comment.replies.length > 0) {
+          const {
+            filteredComments: filteredReplies,
+            removedCount: repliesRemovedCount,
+          } = removeCommentAndReplies(comment.replies, commentIdToRemove);
+          removedCount += repliesRemovedCount;
+          comment.replies = filteredReplies;
+        }
+
+        return true; // Keep this comment
+      });
+
+      return { filteredComments, removedCount };
+    },
+    []
+  );
+
+  // Stable callback for handling deleted comments
+  const handleDeletedComment = useCallback(
+    (deletedCommentId: string) => {
+      console.log("Deleted comment received via WebSocket:", deletedCommentId);
+
+      // Update Apollo cache to remove the deleted comment and its replies
+      apolloClient.cache.updateQuery(
+        {
+          query: GET_COMMENTS_PAGINATED,
+          variables: {
+            postId,
+            page: currentPage,
+            limit: commentsPerPage,
+          },
+        },
+        (existingData: CommentsPaginatedResponse | null) => {
+          if (!existingData?.commentsPaginated) {
+            return existingData;
+          }
+
+          const { commentsPaginated } = existingData;
+
+          // Remove deleted comment and its replies from allComments
+          const { filteredComments: updatedAllComments, removedCount } =
+            removeCommentAndReplies(
+              commentsPaginated.allComments || [],
+              deletedCommentId
+            );
+
+          // Remove deleted comment from top-level comments
+          const updatedComments = (commentsPaginated.comments || []).filter(
+            (comment: CommentType) => comment.id !== deletedCommentId
+          );
+
+          // Update total count (subtract the number of removed comments)
+          const updatedTotalCount = Math.max(
+            0,
+            commentsPaginated.totalCount - removedCount
+          );
+
+          return {
+            commentsPaginated: {
+              ...commentsPaginated,
+              allComments: updatedAllComments,
+              comments: updatedComments,
+              totalCount: updatedTotalCount,
+            },
+          };
+        }
+      );
+    },
+    [
+      postId,
+      currentPage,
+      commentsPerPage,
+      apolloClient,
+      removeCommentAndReplies,
+    ]
+  );
+
   // WebSocket connection management
   useEffect(() => {
     if (isConnected) {
@@ -133,6 +243,9 @@ const CommentsTable: React.FC<CommentsTableProps> = ({
 
       // Set up new comment handler
       onNewComment(handleNewComment);
+
+      // Set up deleted comment handler
+      onDeletedComment(handleDeletedComment);
 
       return () => {
         console.log(`Cleaning up WebSocket for post: ${postId}`);
@@ -145,7 +258,9 @@ const CommentsTable: React.FC<CommentsTableProps> = ({
     joinPost,
     leavePost,
     onNewComment,
+    onDeletedComment,
     handleNewComment,
+    handleDeletedComment,
   ]);
 
   const allComments = paginatedData?.commentsPaginated?.allComments || [];
@@ -308,7 +423,9 @@ const CommentsTable: React.FC<CommentsTableProps> = ({
                 comment={addVotesToComment(comment)}
                 onVote={onVote}
                 onReply={onReply}
+                onDelete={onDelete}
                 isCreatingReply={isCreatingReply}
+                currentUserId={currentUserId}
               />
             </div>
           ))

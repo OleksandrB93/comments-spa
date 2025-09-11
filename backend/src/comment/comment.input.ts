@@ -80,3 +80,12 @@ export class CreateReplyInput {
   @Field(() => CommentAttachmentInput, { nullable: true })
   attachment?: CommentAttachmentInput;
 }
+
+@InputType()
+export class DeleteCommentInput {
+  @Field()
+  commentId: string;
+
+  @Field()
+  userId: string;
+}

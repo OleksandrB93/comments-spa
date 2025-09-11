@@ -66,9 +66,15 @@ input CreateReplyInput {
   username: String!
 }
 
+input DeleteCommentInput {
+  commentId: String!
+  userId: String!
+}
+
 type Mutation {
   createComment(input: CreateCommentInput!): Comment!
   createReply(input: CreateReplyInput!): Comment!
+  deleteComment(input: DeleteCommentInput!): Boolean!
   testRabbitMQ: String!
 }
 

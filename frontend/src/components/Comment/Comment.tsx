@@ -7,6 +7,7 @@ import {
   Clock,
   Info,
   Reply,
+  Trash2,
 } from "lucide-react";
 import type { Comment as CommentType, Attachment } from "@/types";
 import { Button } from "@/components/ui/button";
@@ -24,6 +25,8 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
 import { DialogDescription } from "@radix-ui/react-dialog";
+import { useMutation } from "@apollo/client/react";
+import { DELETE_COMMENT } from "@/graphql/mutations";
 
 interface CommentProps {
   comment: CommentType;
@@ -34,18 +37,24 @@ interface CommentProps {
     author: { username: string; email: string; homepage?: string },
     attachment?: Attachment
   ) => void;
+  onDelete?: (commentId: string) => void;
   depth?: number;
   isCreatingReply?: boolean;
+  currentUserId?: string;
 }
 
 const Comment: React.FC<CommentProps> = ({
   comment,
   onVote,
   onReply,
+  onDelete,
   depth = 0,
   isCreatingReply = false,
+  currentUserId,
 }) => {
   const [showReplyForm, setShowReplyForm] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deleteComment, { loading: isDeleting }] = useMutation(DELETE_COMMENT);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -95,6 +104,34 @@ const Comment: React.FC<CommentProps> = ({
     setShowReplyForm(false);
   };
 
+  const handleDelete = async () => {
+    if (!currentUserId) {
+      console.error("No current user ID provided");
+      return;
+    }
+
+    try {
+      await deleteComment({
+        variables: {
+          input: {
+            commentId: comment.id,
+            userId: currentUserId,
+          },
+        },
+      });
+
+      if (onDelete) {
+        onDelete(comment.id);
+      }
+
+      setShowDeleteDialog(false);
+    } catch (error) {
+      console.error("Error deleting comment:", error);
+    }
+  };
+
+  const canDelete = currentUserId && comment.author.userId === currentUserId;
+
   return (
     <div className={`${depth > 0 ? "ml-6" : ""}`}>
       <div
@@ -129,7 +166,11 @@ const Comment: React.FC<CommentProps> = ({
 
           {/* Action icons */}
           <div className="flex items-center space-x-3">
-            <div className="flex items-center space-x-3 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+            <div
+              className={`flex items-center space-x-3 text-gray-400 transition-opacity duration-200 ${
+                canDelete ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+              }`}
+            >
               <button className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
                 <Hash className="w-4 h-4" />
               </button>
@@ -139,6 +180,50 @@ const Comment: React.FC<CommentProps> = ({
               <button className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
                 <Info className="w-4 h-4" />
               </button>
+              {canDelete && (
+                <Dialog
+                  open={showDeleteDialog}
+                  onOpenChange={setShowDeleteDialog}
+                >
+                  <DialogTrigger asChild>
+                    <button
+                      className={`p-1.5 rounded-lg transition-colors ${
+                        canDelete
+                          ? "bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/30 cursor-pointer"
+                          : "hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-900/20 dark:hover:text-red-400 cursor-pointer"
+                      }`}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-md">
+                    <DialogTitle className="text-lg font-semibold text-gray-900 dark:text-white">
+                      Видалити коментар
+                    </DialogTitle>
+                    <DialogDescription className="text-sm text-gray-600 dark:text-gray-400 mt-2">
+                      Ви впевнені, що хочете видалити цей коментар? Ця дія не
+                      може бути скасована.
+                    </DialogDescription>
+                    <div className="flex justify-end space-x-3 mt-6">
+                      <Button
+                        variant="outline"
+                        onClick={() => setShowDeleteDialog(false)}
+                        disabled={isDeleting}
+                      >
+                        Скасувати
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        onClick={handleDelete}
+                        disabled={isDeleting}
+                        className="bg-red-600 hover:bg-red-700 text-white"
+                      >
+                        {isDeleting ? "Видалення..." : "Видалити"}
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              )}
             </div>
 
             {/* Voting */}
@@ -374,8 +459,10 @@ const Comment: React.FC<CommentProps> = ({
               comment={reply}
               onVote={onVote}
               onReply={onReply}
+              onDelete={onDelete}
               depth={depth + 1}
               isCreatingReply={isCreatingReply}
+              currentUserId={currentUserId}
             />
           ))}
         </div>

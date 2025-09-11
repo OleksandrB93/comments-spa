@@ -43,3 +43,9 @@ export const CREATE_REPLY = gql`
     }
   }
 `;
+
+export const DELETE_COMMENT = gql`
+  mutation DeleteComment($input: DeleteCommentInput!) {
+    deleteComment(input: $input)
+  }
+`;

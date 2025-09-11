@@ -64,6 +64,40 @@ export class AnalyticsService {
     ]);
   }
 
+  // Track comment deletion
+  async trackCommentDeletion(
+    postId: string,
+    userId: string,
+    username: string,
+  ): Promise<void> {
+    const now = new Date();
+    const today = now.toISOString().split('T')[0];
+    const weekStart = this.getWeekStart(now).toISOString().split('T')[0];
+    const monthStart = now.toISOString().substring(0, 7); // YYYY-MM
+
+    // Decrement counters (but don't go below 0)
+    await Promise.all([
+      // Global counters
+      this.redisService.decr('stats:comments:total'),
+      this.redisService.decr(`stats:comments:day:${today}`),
+      this.redisService.decr(`stats:comments:week:${weekStart}`),
+      this.redisService.decr(`stats:comments:month:${monthStart}`),
+
+      // Post-specific counters
+      this.redisService.decr(`stats:post:${postId}:comments`),
+
+      // User-specific counters
+      this.redisService.decr(`stats:user:${userId}:comments`),
+      this.redisService.decr(`stats:user:${userId}:comments:day:${today}`),
+    ]);
+
+    // Update top commenters (sorted set) - decrement
+    await this.redisService.zincrby('stats:top_commenters', -1, username);
+
+    // Update popular posts (sorted set) - decrement
+    await this.redisService.zincrby('stats:popular_posts', -1, postId);
+  }
+
   // Get comment statistics
   async getCommentStats(): Promise<CommentStats> {
     const now = new Date();

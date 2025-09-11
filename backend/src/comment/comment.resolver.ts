@@ -1,7 +1,11 @@
 import { Resolver, Mutation, Query, Args, Int } from '@nestjs/graphql';
 import { ValidationPipe, UseGuards } from '@nestjs/common';
 import { CommentService } from './comment.service';
-import { CreateCommentInput, CreateReplyInput } from './comment.input';
+import {
+  CreateCommentInput,
+  CreateReplyInput,
+  DeleteCommentInput,
+} from './comment.input';
 import { Comment, CommentsResponse } from './comment.model';
 import { RabbitMQTestService } from '../rabbit/rabbitmq-test.service';
 import { RateLimitGuard, UserRateLimitGuard } from '../common/rate-limit.guard';
@@ -40,6 +44,14 @@ export class CommentResolver {
     @Args('limit', { type: () => Int, defaultValue: 25 }) limit: number,
   ): Promise<CommentsResponse> {
     return this.commentService.getCommentsPaginated(postId, page, limit);
+  }
+
+  @Mutation(() => Boolean)
+  @UseGuards(RateLimitGuard, UserRateLimitGuard)
+  async deleteComment(
+    @Args('input') input: DeleteCommentInput,
+  ): Promise<boolean> {
+    return this.commentService.deleteComment(input);
   }
 
   @Mutation(() => String)

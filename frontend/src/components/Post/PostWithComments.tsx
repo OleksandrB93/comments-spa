@@ -130,6 +130,11 @@ const PostWithComments: React.FC<PostWithCommentsProps> = ({ post }) => {
     }
   };
 
+  const handleDeleteComment = (commentId: string) => {
+    // WebSocket will handle updating the comments list
+    console.log(`Comment ${commentId} deleted`);
+  };
+
   return (
     <div className="max-w-4xl mx-auto p-6">
       {/* Post */}
@@ -149,7 +154,9 @@ const PostWithComments: React.FC<PostWithCommentsProps> = ({ post }) => {
           postId={post.id}
           onVote={handleCommentVote}
           onReply={handleReplyToComment}
+          onDelete={handleDeleteComment}
           isCreatingReply={creatingReply}
+          currentUserId="123" // TODO: replace with dynamic user id
         />
       </div>
     </div>

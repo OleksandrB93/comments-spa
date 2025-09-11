@@ -78,6 +78,12 @@ export class CommentWorker implements OnModuleInit {
       this.handleCommentCreated.bind(this),
     );
 
+    // 1.1. Process deleted comments
+    await this.rabbitMQService.subscribe(
+      'comment.deleted',
+      this.handleCommentDeleted.bind(this),
+    );
+
     // 2. Process files
     await this.rabbitMQService.subscribe(
       'file.processing',
@@ -97,7 +103,45 @@ export class CommentWorker implements OnModuleInit {
       this.handleWebSocketBroadcast.bind(this),
     );
 
+    await this.rabbitMQService.subscribeToExchange(
+      'comment.events',
+      'comment.deleted',
+      this.handleWebSocketBroadcast.bind(this),
+    );
+
     this.logger.log('Comment worker subscriptions set up');
+  }
+
+  /**
+   * Process deleted comment
+   */
+  private async handleCommentDeleted(message: any): Promise<void> {
+    try {
+      this.logger.log(`Processing comment deleted: ${message.commentId}`);
+
+      // Broadcast through WebSocket exchange
+      await this.rabbitMQService.publishToExchange(
+        'comment.events',
+        'comment.deleted',
+        {
+          type: 'DELETED_COMMENT',
+          data: {
+            commentId: message.commentId,
+            postId: message.postId,
+          },
+        },
+      );
+
+      this.logger.log(
+        `Comment ${message.commentId} deletion processed successfully`,
+      );
+    } catch (error) {
+      this.logger.error(
+        `Error processing comment deleted: ${message.commentId}`,
+        error,
+      );
+      throw error;
+    }
   }
 
   /**
@@ -250,7 +294,7 @@ export class CommentWorker implements OnModuleInit {
       } else if (message.type === 'DELETED_COMMENT') {
         this.commentGateway.broadcastDeletedComment(
           message.data.postId,
-          message.data.id,
+          message.data.commentId,
         );
       }
 
