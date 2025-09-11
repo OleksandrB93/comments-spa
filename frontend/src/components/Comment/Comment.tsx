@@ -198,11 +198,11 @@ const Comment: React.FC<CommentProps> = ({
                   </DialogTrigger>
                   <DialogContent className="sm:max-w-md">
                     <DialogTitle className="text-lg font-semibold text-gray-900 dark:text-white">
-                      Видалити коментар
+                      Remove comment
                     </DialogTitle>
                     <DialogDescription className="text-sm text-gray-600 dark:text-gray-400 mt-2">
-                      Ви впевнені, що хочете видалити цей коментар? Ця дія не
-                      може бути скасована.
+                      Are you sure you want to remove this comment? This action
+                      cannot be undone.
                     </DialogDescription>
                     <div className="flex justify-end space-x-3 mt-6">
                       <Button
@@ -210,7 +210,7 @@ const Comment: React.FC<CommentProps> = ({
                         onClick={() => setShowDeleteDialog(false)}
                         disabled={isDeleting}
                       >
-                        Скасувати
+                        Cancel
                       </Button>
                       <Button
                         variant="destructive"
@@ -218,7 +218,7 @@ const Comment: React.FC<CommentProps> = ({
                         disabled={isDeleting}
                         className="bg-red-600 hover:bg-red-700 text-white"
                       >
-                        {isDeleting ? "Видалення..." : "Видалити"}
+                        {isDeleting ? "Removing..." : "Remove"}
                       </Button>
                     </div>
                   </DialogContent>
